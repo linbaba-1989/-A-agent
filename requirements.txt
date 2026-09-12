@@ -2,3 +2,5 @@ streamlit>=1.38
 openai>=1.40
 python-dotenv>=1.0
 pandas>=2.2
+pytest>=8.0
+psutil>=5.9
