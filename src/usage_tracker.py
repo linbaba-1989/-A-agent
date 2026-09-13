@@ -17,9 +17,9 @@ class UsageRecord:
     provider: str
     model: str
     role: str
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
+    input_tokens: int | None
+    output_tokens: int | None
+    total_tokens: int | None
     latency: float
     estimated_cost: float
     timestamp: str
@@ -31,6 +31,11 @@ class UsageRecord:
     requested_model: str | None = None
     actual_model: str | None = None
     fallback_reason: str | None = None
+    usage_status: str = "available"
+    schema_repair_count: int = 0
+    connect_latency: float | None = None
+    first_token_latency: float | None = None
+    timeout_stage: str | None = None
 
 
 class UsageTracker:
@@ -55,6 +60,6 @@ class UsageTracker:
             key = row["role"]
             item = totals.setdefault(key, {"calls": 0, "total_tokens": 0, "estimated_cost": 0.0})
             item["calls"] += 1
-            item["total_tokens"] += row["total_tokens"]
+            item["total_tokens"] += row["total_tokens"] or 0
             item["estimated_cost"] += row["estimated_cost"]
         return totals

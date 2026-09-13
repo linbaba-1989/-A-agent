@@ -64,6 +64,11 @@ def build_fact_bundle(symbol: str = "600498.SH", provider: QMTProvider | None = 
                              history.get("high_10d", UNAVAILABLE), history.get("high_20d", UNAVAILABLE))
     crossed = [label for label, value in (("5d", high5), ("10d", high10), ("20d", high20))
                if value != UNAVAILABLE and float(last) >= float(value)]
+    complete_history = history_frame.copy()
+    recent_columns = [column for column in ("time", "open", "high", "low", "close", "volume", "amount")
+                      if column in complete_history.columns]
+    recent_daily = complete_history[recent_columns].tail(20).to_dict(orient="records")
+    volume_ratio = MarketScanner._volume_ratio(tick, history)
     return {
         "fact_classification": "CONFIRMED_FACT",
         "code": symbol,
@@ -86,6 +91,8 @@ def build_fact_bundle(symbol: str = "600498.SH", provider: QMTProvider | None = 
         "ma20": realtime_ma(closes, last, 20),
         "ma60": realtime_ma(closes, last, 60),
         "atr14": history.get("atr14", UNAVAILABLE),
+        "volume_ratio": volume_ratio,
+        "recent_daily_k": recent_daily,
         "high_5d": high5,
         "high_10d": high10,
         "high_20d": high20,
@@ -96,6 +103,7 @@ def build_fact_bundle(symbol: str = "600498.SH", provider: QMTProvider | None = 
         "speed_3m": scanner.snapshot_history.speed(symbol, 3),
         "speed_5m": scanner.snapshot_history.speed(symbol, 5),
         "fundamental_data": UNAVAILABLE,
+        "event_data": UNAVAILABLE,
         "announcement_data": UNAVAILABLE,
         "news_data": UNAVAILABLE,
         "industry_data": UNAVAILABLE,
@@ -154,7 +162,7 @@ def _usage(result: dict[str, Any]) -> dict[str, Any]:
             "input_tokens", "output_tokens", "total_tokens", "estimated_cost", "success", "fallback",
             "error", "requested_model", "actual_model", "fallback_reason",
         )} for row in rows],
-        "total_tokens": sum(row.get("total_tokens", 0) for row in rows),
+        "total_tokens": sum((row.get("total_tokens") or 0) for row in rows),
         "total_estimated_cost": sum(row.get("estimated_cost", 0.0) for row in rows),
     }
 

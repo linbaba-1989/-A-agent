@@ -1,7 +1,7 @@
 import json
 from types import SimpleNamespace
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from src.llm_router import LLMRouter
 from src.model_registry import ModelRegistry, ProviderConfig
@@ -9,6 +9,7 @@ from src.usage_tracker import UsageTracker
 
 
 class Output(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     value: str
 
 
@@ -59,12 +60,12 @@ def test_primary_failure_uses_fallback(monkeypatch, tmp_path):
     assert [name for name, _ in calls] == ["primary", "fallback"]
 
 
-def test_primary_retries_before_fallback(monkeypatch, tmp_path):
+def test_primary_is_attempted_once_before_fallback(monkeypatch, tmp_path):
     router, calls = make_router(monkeypatch, tmp_path,
-                                {"primary": [TimeoutError("first"), response()], "fallback": []}, retries=1)
+                                {"primary": [TimeoutError("first")], "fallback": [response()]}, retries=1)
     result = router.call("role", [], Output, "A2-retry")
-    assert result.success and result.provider == "primary"
-    assert [name for name, _ in calls] == ["primary", "primary"]
+    assert result.success and result.provider == "fallback"
+    assert [name for name, _ in calls] == ["primary", "fallback"]
 
 
 def test_provider_temperature_capability_is_used_by_healthcheck(monkeypatch, tmp_path):
@@ -169,6 +170,47 @@ def test_bad_json_gets_one_format_repair(monkeypatch, tmp_path):
     result = router.call("role", [], Output, "A3")
     assert result.data == {"value": "fixed"}
     assert len(calls) == 2
+    assert result.schema_repair_count == 1
+
+
+def test_wrong_type_missing_and_extra_fields_are_repaired(monkeypatch, tmp_path):
+    for index, invalid in enumerate(('{"value":42}', '{}', '{"value":"x","extra":1}')):
+        router, calls = make_router(monkeypatch, tmp_path,
+                                    {"primary": [response(invalid), response('{"value":"fixed"}')],
+                                     "fallback": []})
+        result = router.call("role", [], Output, f"repair-{index}")
+        assert result.success and result.data == {"value": "fixed"}
+        repair_prompt = calls[1][1]["messages"][-1]["content"]
+        assert "Validation errors" in repair_prompt and "Correct JSON Schema" in repair_prompt
+
+
+def test_schema_repair_failure_records_usage(monkeypatch, tmp_path):
+    router, _ = make_router(monkeypatch, tmp_path,
+                            {"primary": [response('{}', 10, 2), response('{}', 12, 3)],
+                             "fallback": []})
+    result = router.call("role", [], Output, "repair-fail")
+    assert not result.success and "schema_validation_failed" in result.error
+    attempt = router.tracker.records()[0]
+    assert attempt["usage_status"] == "available"
+    assert attempt["total_tokens"] == 27
+    assert attempt["schema_repair_count"] == 1
+
+
+def test_timeout_usage_is_unavailable(monkeypatch, tmp_path):
+    router, _ = make_router(monkeypatch, tmp_path,
+                            {"primary": [TimeoutError("slow")], "fallback": [TimeoutError("slow too")]})
+    result = router.call("role", [], Output, "timeouts")
+    assert not result.success
+    attempts = [row for row in router.tracker.records() if row["provider"] != "unavailable"]
+    assert all(row["usage_status"] == "unavailable" and row["total_tokens"] is None for row in attempts)
+    assert all(row["timeout_stage"] == "response" for row in attempts)
+
+
+def test_schema_is_added_to_every_request(monkeypatch, tmp_path):
+    router, calls = make_router(monkeypatch, tmp_path, {"primary": [response()], "fallback": []})
+    router.call("role", [], Output, "schema")
+    schema_prompt = calls[0][1]["messages"][-1]["content"]
+    assert "JSON Schema" in schema_prompt and "additionalProperties" in schema_prompt
 
 
 def test_no_key_and_all_models_failed(monkeypatch, tmp_path):

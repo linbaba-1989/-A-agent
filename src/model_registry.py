@@ -21,8 +21,8 @@ class ProviderConfig:
     base_url: str | None
     api_key_env: str
     enabled: bool = True
-    timeout: float = 30.0
-    max_retries: int = 1
+    timeout: float = 90.0
+    max_retries: int = 0
     priority: int = 100
     cost_profile: dict[str, float] | None = None
     capabilities: tuple[str, ...] = ("chat", "json")
@@ -31,6 +31,7 @@ class ProviderConfig:
     supports_reasoning_effort: bool = False
     reasoning_levels: tuple[str, ...] = ()
     reasoning_mode: str | None = None
+    supports_json_schema: bool = False
 
     @property
     def api_key(self) -> str | None:

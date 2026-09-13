@@ -1,7 +1,13 @@
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class TechnicalReport(BaseModel):
+class StrictReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class TechnicalReport(StrictReport):
     trend: str
     momentum: str
     volume_price: str
@@ -16,17 +22,19 @@ class TechnicalReport(BaseModel):
     summary: str
 
 
-class FundamentalEventReport(BaseModel):
+class FundamentalEventReport(StrictReport):
+    data_status: Literal["available", "partial", "unavailable"]
     confirmed_facts: list[str]
-    available_fundamental_data: list[str] | str
-    event_data: list[str] | str
+    available_fundamental_data: list[str]
+    event_data: list[str]
     missing_data: list[str]
     possible_implications: list[str]
     confidence: int = Field(ge=0, le=100)
     summary: str
 
 
-class SentimentReport(BaseModel):
+class SentimentReport(StrictReport):
+    data_status: Literal["available", "partial", "unavailable"]
     confirmed_market_signals: list[str]
     momentum_sentiment: str
     volume_sentiment: str
@@ -36,7 +44,7 @@ class SentimentReport(BaseModel):
     summary: str
 
 
-class RiskReport(BaseModel):
+class RiskReport(StrictReport):
     technical_risks: list[str]
     data_quality_risks: list[str]
     positioning_risks: list[str]
@@ -48,7 +56,9 @@ class RiskReport(BaseModel):
     summary: str
 
 
-class ChiefReport(BaseModel):
+class ChiefReport(StrictReport):
+    status: Literal["complete", "degraded"]
+    missing_roles: list[str]
     confirmed_facts: list[str]
     data_gaps: list[str]
     bull_case: list[str]
