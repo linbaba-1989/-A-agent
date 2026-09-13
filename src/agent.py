@@ -8,6 +8,8 @@ from typing import Any
 from .agent_schemas import (ChiefReport, FundamentalEventReport, RiskReport,
                             SentimentReport, TechnicalReport)
 from .llm_router import LLMRouter, RouterResult
+from .a_share_factors import build_role_factors
+from .knowledge_loader import load_role_knowledge, structured_prompt
 
 ROLE_SCHEMAS = {
     "technical_analyst": TechnicalReport,
@@ -30,7 +32,8 @@ class StockResearchAgent:
         self.prompt_dir = Path(prompt_dir or Path(__file__).resolve().parents[1] / "prompts")
 
     def _prompt(self, role: str) -> str:
-        return (self.prompt_dir / PROMPT_FILES[role]).read_text(encoding="utf-8")
+        role_text = (self.prompt_dir / PROMPT_FILES[role]).read_text(encoding="utf-8")
+        return structured_prompt(role_text, load_role_knowledge(role))
 
     @staticmethod
     def _role_facts(role: str, facts: dict[str, Any]) -> dict[str, Any]:
@@ -52,7 +55,8 @@ class StockResearchAgent:
                               "fundamental_data", "event_data", "sentiment_external_data"),
         }[role]
         return {"confirmed_market_facts": common,
-                "role_specific_data": {key: facts.get(key, "unavailable") for key in role_keys}}
+                "role_specific_data": {key: facts.get(key, "unavailable") for key in role_keys},
+                "program_factors": build_role_factors(facts)}
 
     @staticmethod
     def analysis_id(symbol: str, analysis_mode: str = "standard", now: datetime | None = None) -> str:
