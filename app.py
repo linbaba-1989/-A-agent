@@ -1,8 +1,10 @@
-import os
+from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from src.agent import StockResearchAgent
+from src.llm_router import load_role_config
+from src.model_registry import ModelRegistry
 from src.qmt_provider import QMTProvider
 from src.scanner import MarketScanner
 
@@ -18,13 +20,19 @@ if status.ok:
 else:
     st.error(f"QMT 未连接，实时筛选已停止：{status.message}")
 
-scan_tab, stock_tab, diagnostic_tab = st.tabs(["全A实时筛选", "单股研究", "行情诊断"])
+scan_tab, stock_tab, employees_tab, diagnostic_tab = st.tabs(["全A实时筛选", "单股研究", "AI员工", "行情诊断"])
 
 @st.cache_resource
 def scanner_resource(qmt_path: str, qmt_port: int) -> MarketScanner:
     return MarketScanner(QMTProvider(qmt_path=qmt_path, port=qmt_port))
 
 scanner = scanner_resource(provider.qmt_path, provider.port)
+
+@st.cache_resource
+def workforce_resource() -> StockResearchAgent:
+    return StockResearchAgent()
+
+workforce = workforce_resource()
 
 with scan_tab:
     top_n = st.number_input("显示数量", min_value=10, max_value=100, value=30, step=10)
@@ -46,11 +54,9 @@ with scan_tab:
         display_rows = pd.DataFrame(result.rows)
         if "turnover_rate" in display_rows:
             display_rows["turnover_rate"] = pd.to_numeric(display_rows["turnover_rate"], errors="coerce").round(4)
-        st.dataframe(display_rows, use_container_width=True, hide_index=True)
+        st.dataframe(display_rows, width="stretch", hide_index=True)
 
 with stock_tab:
-    model = st.selectbox("分析模型", ["deepseek", "qwen", "kimi", "doubao", "openai"],
-                         index=["deepseek", "qwen", "kimi", "doubao", "openai"].index(os.getenv("DEFAULT_MODEL", "deepseek")))
     symbol = st.text_input("股票代码", "600498.SH", help="例如：600498.SH、000001.SZ")
     if st.button("读取真实行情并分析", disabled=not status.ok):
         normalized_symbol = symbol.strip().upper()
@@ -66,7 +72,46 @@ with stock_tab:
                 else:
                     st.line_chart(history["close"])
             with st.spinner("研究中…"):
-                st.markdown(StockResearchAgent(model).analyze(normalized_symbol, quote))
+                st.json(workforce.analyze(normalized_symbol, quote))
+
+with employees_tab:
+    st.subheader("AI 员工管理")
+    routes = load_role_config()
+    registry = ModelRegistry()
+    role_names = {"technical_analyst": "技术分析员", "fundamental_event_analyst": "基本面/事件分析员",
+                  "sentiment_analyst": "市场情绪分析员", "risk_officer": "风控官",
+                  "chief_researcher": "总研究员"}
+    usage = workforce.router.tracker.summary()
+    employee_rows = []
+    for role, route in routes.items():
+        recent = workforce.router.last_results.get(role)
+        primary = registry.get(route["primary"])
+        state = "⚪ 未配置" if not primary.configured else "🟢 待命"
+        runtime_state = workforce.router.role_states.get(role)
+        if runtime_state == "working":
+            state = "🔵 工作中"
+        if recent and runtime_state != "working":
+            state = "🟢 待命" if recent.success else "🔴 异常"
+            if recent.fallback:
+                state = "🟡 fallback"
+        totals = usage.get(role, {})
+        employee_rows.append({"员工岗位": role_names[role], "主模型": route["primary"], "备用模型": route["fallback"],
+                              "工作状态": state, "最近任务": recent.analysis_id if recent else "-",
+                              "最近耗时": recent.latency if recent else 0, "最近Token": recent.total_tokens if recent else 0,
+                              "累计Token": int(totals.get("total_tokens", 0)),
+                              "累计估算成本": totals.get("estimated_cost", 0.0),
+                              "错误": recent.error if recent else None})
+    st.dataframe(pd.DataFrame(employee_rows), width="stretch", hide_index=True)
+    provider_rows = [{"Provider": item["provider_name"], "Model": item["model_name"],
+                      "状态": "🟢 已配置 / 待命" if item["configured"] else "🔴 未配置"}
+                     for item in registry.statuses()]
+    st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+    st.caption("页面加载只检查配置，不发送模型请求。")
+    if st.button("一键体检"):
+        with st.spinner("每个已配置 Provider 发送一次极短 JSON 请求…"):
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                checks = list(pool.map(workforce.router.healthcheck, registry.providers))
+        st.dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
 
 with diagnostic_tab:
     st.subheader("xtquant 运行时来源")

@@ -10,3 +10,4 @@ tools/xtquant_probe/*.json
 # Official xtquant runtime contains vendor binaries with unclear redistribution terms.
 # Install it locally by following tools/xtquant_runtime/230825b/README.md.
 tools/xtquant_runtime/230825b/xtquant/
+logs/model_usage.jsonl

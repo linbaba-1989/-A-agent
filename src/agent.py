@@ -1,25 +1,65 @@
+"""Parallel AI workforce. Models interpret immutable QMT facts only."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 import json
-from .llm import ask
+from pathlib import Path
+from typing import Any
 
-ROLES = [
-    ("技术分析师", "只基于行情快照，判断趋势、关键价位、量价关系；未知信息要明确说明。"),
-    ("基本面与事件研究员", "识别必须补充核实的财务、公告、产业链信息；禁止把猜测写成事实。"),
-    ("市场情绪研究员", "评价交易拥挤度与情绪风险，给出需要观察的信号。"),
-    ("风控官", "给出仓位、止损失效条件和不确定性；不能给确定收益承诺。"),
-]
+from .agent_schemas import (ChiefReport, FundamentalEventReport, RiskReport,
+                            SentimentReport, TechnicalReport)
+from .llm_router import LLMRouter, RouterResult
+
+ROLE_SCHEMAS = {
+    "technical_analyst": TechnicalReport,
+    "fundamental_event_analyst": FundamentalEventReport,
+    "sentiment_analyst": SentimentReport,
+    "risk_officer": RiskReport,
+}
+PROMPT_FILES = {
+    "technical_analyst": "technical.md",
+    "fundamental_event_analyst": "fundamental.md",
+    "sentiment_analyst": "sentiment.md",
+    "risk_officer": "risk.md",
+    "chief_researcher": "chief.md",
+}
+
 
 class StockResearchAgent:
-    def __init__(self, model_name: str):
-        self.model_name = model_name
+    def __init__(self, router: LLMRouter | None = None, prompt_dir: str | Path | None = None):
+        self.router = router or LLMRouter()
+        self.prompt_dir = Path(prompt_dir or Path(__file__).resolve().parents[1] / "prompts")
 
-    def analyze(self, symbol: str, quote: dict) -> str:
-        context = f"标的：{symbol}\n真实QMT快照：{json.dumps(quote, ensure_ascii=False)}"
-        reports = []
-        for title, instruction in ROLES:
-            reports.append(f"### {title}\n{ask(self.model_name, instruction, context)}")
-        synthesis = ask(
-            self.model_name,
-            "你是总研究员。基于各角色结论，输出：已确认事实、待验证点、交易观察计划、主要风险。不要编造数据，不构成投资建议。",
-            context + "\n\n" + "\n\n".join(reports),
-        )
-        return "\n\n".join(reports) + f"\n\n## 总研究员汇总\n{synthesis}"
+    def _prompt(self, role: str) -> str:
+        return (self.prompt_dir / PROMPT_FILES[role]).read_text(encoding="utf-8")
+
+    @staticmethod
+    def analysis_id(symbol: str, now: datetime | None = None) -> str:
+        return f"{symbol}_{(now or datetime.now()).strftime('%Y%m%d_%H%M%S')}"
+
+    def _role_call(self, role: str, facts: dict[str, Any], analysis_id: str) -> RouterResult:
+        messages = [{"role": "system", "content": self._prompt(role)},
+                    {"role": "user", "content": "FACT DATA（只读）：\n" + json.dumps(facts, ensure_ascii=False, default=str)}]
+        return self.router.call(role, messages, ROLE_SCHEMAS[role], analysis_id)
+
+    def analyze(self, symbol: str, fact_data: dict[str, Any]) -> dict[str, Any]:
+        analysis_id = self.analysis_id(symbol)
+        immutable_facts = json.loads(json.dumps(fact_data, ensure_ascii=False, default=str))
+        role_results: dict[str, RouterResult] = {}
+        with ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-employee") as pool:
+            futures = {pool.submit(self._role_call, role, immutable_facts, analysis_id): role for role in ROLE_SCHEMAS}
+            for future in as_completed(futures):
+                role = futures[future]
+                try:
+                    role_results[role] = future.result()
+                except Exception as exc:
+                    role_results[role] = RouterResult(role, None, None, False, None, 0.0,
+                                                      error=f"{type(exc).__name__}: {exc}")
+        chief_input = {role: result.data if result.success else "unavailable" for role, result in role_results.items()}
+        chief_messages = [{"role": "system", "content": self._prompt("chief_researcher")},
+                          {"role": "user", "content": json.dumps(
+                              {"analysis_id": analysis_id, "FACT DATA": immutable_facts,
+                               "role_reports": chief_input}, ensure_ascii=False, default=str)}]
+        chief = self.router.call("chief_researcher", chief_messages, ChiefReport, analysis_id)
+        return {"analysis_id": analysis_id, "symbol": symbol, "fact_data": immutable_facts,
+                "employees": {role: vars(result) for role, result in role_results.items()},
+                "chief_researcher": vars(chief)}

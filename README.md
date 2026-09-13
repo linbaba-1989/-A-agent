@@ -11,6 +11,11 @@
 - **三级连接判定**：分别记录 xtquant 导入、基础 RPC 请求和真实股票 tick，不以进程或 `is_connected()` 单独判定
 - **缓存边界**：合约信息与历史日 K 初始化一次；盘中每轮只更新全量 tick 和 10 分钟内存快照
 - **分析工作流**：技术面、基本面/事件、情绪、风控四个角色分别输出，再由总研究员汇总
+- **AI 员工路由**：五家 Provider 由 `config/agent_config.json` 为岗位配置主模型和备用模型
+- **失败隔离**：主模型有限重试后自动切换备用模型；岗位全部失败时输出 `unavailable`
+- **结构化输出**：各岗位使用 Pydantic 校验 JSON，格式错误最多修复一次
+- **并行分析**：四个专业岗位并行执行，完成后再调用总研究员
+- **用量审计**：调用元数据写入本机 `logs/model_usage.jsonl`，不记录 Prompt、FACT DATA 或 API Key
 - **可审计输出**：每次分析带行情来源、时间、模型与风险提示
 - **隐私**：API Key 仅放在本机 `.env`，不会上传 GitHub
 
@@ -29,6 +34,8 @@ streamlit run app.py
 ```
 
 先按 [项目隔离 xtquant 安装说明](tools/xtquant_runtime/230825b/README.md)安装官方 `230825b` 运行时。项目不会上传或替换 QMT 安装目录中的 DLL、pyd 或 Python 文件。`QMT_PATH` 仅用于诊断页面定位和比较券商随附组件，生产行情固定从项目隔离目录加载；端口必须与本机 QMT 行情服务一致。模型 Key 仅在运行单股 AI 研究时需要。
+
+AI 岗位路由可直接编辑 `config/agent_config.json`，无需修改 Python。启动和打开“AI员工”页只检查 Key 与配置，不调用任何模型；只有单股深度分析或用户点击“一键体检”时才发送请求。成本单价通过 `.env` 中各供应商的 `*_INPUT_COST_PER_MILLION` 和 `*_OUTPUT_COST_PER_MILLION` 配置，未配置时记录为 0，避免展示未经确认的价格。
 
 启动 QMT 并登录行情后，可以先执行只读诊断：
 

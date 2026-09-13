@@ -1,0 +1,9 @@
+{
+  "roles": {
+    "technical_analyst": {"primary": "deepseek", "fallback": "openai"},
+    "fundamental_event_analyst": {"primary": "qwen", "fallback": "kimi"},
+    "sentiment_analyst": {"primary": "doubao", "fallback": "kimi"},
+    "risk_officer": {"primary": "openai", "fallback": "deepseek"},
+    "chief_researcher": {"primary": "openai", "fallback": "deepseek"}
+  }
+}
