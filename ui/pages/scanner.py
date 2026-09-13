@@ -2,6 +2,7 @@ import streamlit as st
 
 from ui.components.stock_table import render_stock_table
 from ui.view_models import RANGE_PLACEHOLDERS, filter_scan_rows
+from ui.stock_research_service import select_research_symbol
 
 
 def _range(container, label, prefix, suffix=""):
@@ -74,6 +75,5 @@ def render(ctx: dict) -> None:
     if rows:
         chosen = st.selectbox("选择股票进行研究", [row["symbol"] for row in rows if row.get("symbol")])
         if st.button("研究"):
-            st.session_state.selected_symbol = chosen
-            st.session_state.nav_page = "个股研究"
+            select_research_symbol(st.session_state, chosen)
             st.rerun()

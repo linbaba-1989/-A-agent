@@ -26,6 +26,15 @@ h2 { font-size:1.18rem !important; }
 .panel { background:#fff; border:1px solid var(--line); border-radius:3px; padding:9px 11px; margin-bottom:8px; }
 .eyebrow { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
 .price { font-size:30px; font-weight:700; line-height:1.1; }
+.quote-grid { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:7px; margin:7px 0; }
+.quote-grid div { background:#fff; border:1px solid var(--line); padding:8px 10px; min-width:0; }
+.quote-grid span { display:block; color:var(--muted); font-size:11px; }
+.quote-grid b { display:block; margin-top:3px; font-size:14px; white-space:nowrap; }
+.tech-panel { background:#fff; border:1px solid var(--line); padding:9px 11px; font-size:12px; }
+.tech-row { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dotted #eaecf0; }
+.tech-row span { color:var(--muted); } .tech-row b { text-align:right; }
+.tech-note { color:var(--muted); font-size:10px; margin:3px 0 5px; }
+.tech-section { margin-top:9px; }
 .top-tool { background:#fff; border:1px solid var(--line); border-radius:3px; padding:6px 10px; margin-bottom:7px; }
 .index-strip,.system-strip { display:flex; align-items:center; gap:22px; min-height:36px; padding:7px 11px; background:#fff; border:1px solid var(--line); font-size:13px; }
 .system-strip { min-height:52px; justify-content:space-between; margin:7px 0; }

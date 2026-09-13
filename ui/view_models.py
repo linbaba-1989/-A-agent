@@ -6,6 +6,7 @@ from typing import Any
 
 UNAVAILABLE = "unavailable"
 RANGE_PLACEHOLDERS = ("最低", "最高")
+FUNDAMENTAL_GAP_MESSAGE = "当前未接入完整基本面 / 公告 / 新闻数据"
 
 
 def normalize_stock_name(value: Any, fallback: str = "--") -> str:

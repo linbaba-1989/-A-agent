@@ -1,6 +1,6 @@
 import streamlit as st
 
-from ui.view_models import raw_json_expanded_default, report_view, safe_error
+from ui.view_models import FUNDAMENTAL_GAP_MESSAGE, raw_json_expanded_default, report_view, safe_error
 
 
 def _list(title: str, values) -> None:
@@ -43,7 +43,7 @@ def render_ai_report(result: dict) -> None:
             _list(label, technical.get(key) if isinstance(technical.get(key), list) else [technical.get(key)] if technical.get(key) else [])
     with tabs[1]:
         if fundamental.get("data_status") == "unavailable":
-            st.warning("当前未接入完整基本面 / 公告 / 新闻数据")
+            st.warning(FUNDAMENTAL_GAP_MESSAGE)
         st.write(fundamental.get("summary", "--"))
     with tabs[2]: st.write(sentiment.get("summary", "--"))
     with tabs[3]: st.write(risk.get("summary", "--"))
