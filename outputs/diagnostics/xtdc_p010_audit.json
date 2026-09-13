@@ -1,0 +1,4720 @@
+{
+  "runtime_version": "250807.1.2",
+  "token_configured": true,
+  "token_expiry": "unknown",
+  "initialized": true,
+  "init_error": null,
+  "provider": "XtDataCenter Token",
+  "audit": {
+    "raw_count": 6049,
+    "active_count": 5557,
+    "tick_returned_count": 5562,
+    "valid_tick_count": 5557,
+    "missing_tick_count": 487,
+    "missing_tick_symbols": [
+      "000003.SZ",
+      "000004.SZ",
+      "000005.SZ",
+      "000013.SZ",
+      "000015.SZ",
+      "000018.SZ",
+      "000022.SZ",
+      "000023.SZ",
+      "000024.SZ",
+      "000033.SZ",
+      "000038.SZ",
+      "000040.SZ",
+      "000043.SZ",
+      "000046.SZ",
+      "000047.SZ",
+      "000150.SZ",
+      "000405.SZ",
+      "000406.SZ",
+      "000412.SZ",
+      "000413.SZ",
+      "000418.SZ",
+      "000502.SZ",
+      "000508.SZ",
+      "000511.SZ",
+      "000515.SZ",
+      "000522.SZ",
+      "000527.SZ",
+      "000535.SZ",
+      "000540.SZ",
+      "000542.SZ",
+      "000556.SZ",
+      "000562.SZ",
+      "000569.SZ",
+      "000578.SZ",
+      "000583.SZ",
+      "000584.SZ",
+      "000585.SZ",
+      "000587.SZ",
+      "000588.SZ",
+      "000594.SZ",
+      "000602.SZ",
+      "000606.SZ",
+      "000611.SZ",
+      "000613.SZ",
+      "000616.SZ",
+      "000618.SZ",
+      "000621.SZ",
+      "000622.SZ",
+      "000627.SZ",
+      "000638.SZ",
+      "000653.SZ",
+      "000658.SZ",
+      "000660.SZ",
+      "000662.SZ",
+      "000666.SZ",
+      "000667.SZ",
+      "000671.SZ",
+      "000673.SZ",
+      "000675.SZ",
+      "000687.SZ",
+      "000689.SZ",
+      "000693.SZ",
+      "000699.SZ",
+      "000730.SZ",
+      "000732.SZ",
+      "000748.SZ",
+      "000760.SZ",
+      "000763.SZ",
+      "000765.SZ",
+      "000769.SZ",
+      "000780.SZ",
+      "000805.SZ",
+      "000806.SZ",
+      "000817.SZ",
+      "000827.SZ",
+      "000832.SZ",
+      "000835.SZ",
+      "000836.SZ",
+      "000851.SZ",
+      "000861.SZ",
+      "000866.SZ",
+      "000916.SZ",
+      "000918.SZ",
+      "000939.SZ",
+      "000956.SZ",
+      "000961.SZ",
+      "000971.SZ",
+      "000976.SZ",
+      "000979.SZ",
+      "000982.SZ",
+      "000996.SZ",
+      "002002.SZ",
+      "002013.SZ",
+      "002018.SZ",
+      "002070.SZ",
+      "002071.SZ",
+      "002087.SZ",
+      "002089.SZ",
+      "002113.SZ",
+      "002118.SZ",
+      "002143.SZ",
+      "002147.SZ",
+      "002220.SZ",
+      "002231.SZ",
+      "002257.SZ",
+      "002260.SZ",
+      "002280.SZ",
+      "002288.SZ",
+      "002308.SZ",
+      "002325.SZ",
+      "002336.SZ",
+      "002341.SZ",
+      "002359.SZ",
+      "002411.SZ",
+      "002417.SZ",
+      "002433.SZ",
+      "002435.SZ",
+      "002447.SZ",
+      "002450.SZ",
+      "002464.SZ",
+      "002473.SZ",
+      "002477.SZ",
+      "002499.SZ",
+      "002502.SZ",
+      "002503.SZ",
+      "002504.SZ",
+      "002505.SZ",
+      "002509.SZ",
+      "002525.SZ",
+      "002604.SZ",
+      "002610.SZ",
+      "002618.SZ",
+      "002619.SZ",
+      "002621.SZ",
+      "002665.SZ",
+      "002680.SZ",
+      "002684.SZ",
+      "002699.SZ",
+      "002710.SZ",
+      "002711.SZ",
+      "002720.SZ",
+      "002740.SZ",
+      "002750.SZ",
+      "002751.SZ",
+      "002770.SZ",
+      "002776.SZ",
+      "002781.SZ",
+      "002808.SZ",
+      "002898.SZ",
+      "300023.SZ",
+      "300028.SZ",
+      "300029.SZ",
+      "300038.SZ",
+      "300060.SZ",
+      "300064.SZ",
+      "300089.SZ",
+      "300090.SZ",
+      "300104.SZ",
+      "300108.SZ",
+      "300114.SZ",
+      "300116.SZ",
+      "300117.SZ",
+      "300156.SZ",
+      "300178.SZ",
+      "300186.SZ",
+      "300202.SZ",
+      "300208.SZ",
+      "300216.SZ",
+      "300262.SZ",
+      "300273.SZ",
+      "300280.SZ",
+      "300282.SZ",
+      "300297.SZ",
+      "300309.SZ",
+      "300312.SZ",
+      "300325.SZ",
+      "300330.SZ",
+      "300336.SZ",
+      "300344.SZ",
+      "300356.SZ",
+      "300361.SZ",
+      "300362.SZ",
+      "300367.SZ",
+      "300372.SZ",
+      "300379.SZ",
+      "300391.SZ",
+      "300392.SZ",
+      "300431.SZ",
+      "300495.SZ",
+      "300526.SZ",
+      "300630.SZ",
+      "300646.SZ",
+      "300742.SZ",
+      "300799.SZ",
+      "301716.SZ",
+      "430198.BJ",
+      "430418.BJ",
+      "430425.BJ",
+      "430476.BJ",
+      "430489.BJ",
+      "430556.BJ",
+      "430564.BJ",
+      "430685.BJ",
+      "600001.SH",
+      "600002.SH",
+      "600003.SH",
+      "600005.SH",
+      "600065.SH",
+      "600068.SH",
+      "600069.SH",
+      "600070.SH",
+      "600074.SH",
+      "600077.SH",
+      "600083.SH",
+      "600086.SH",
+      "600087.SH",
+      "600090.SH",
+      "600091.SH",
+      "600092.SH",
+      "600093.SH",
+      "600102.SH",
+      "600112.SH",
+      "600122.SH",
+      "600139.SH",
+      "600145.SH",
+      "600146.SH",
+      "600175.SH",
+      "600181.SH",
+      "600190.SH",
+      "600193.SH",
+      "600200.SH",
+      "600205.SH",
+      "600209.SH",
+      "600213.SH",
+      "600220.SH",
+      "600225.SH",
+      "600240.SH",
+      "600242.SH",
+      "600247.SH",
+      "600253.SH",
+      "600260.SH",
+      "600263.SH",
+      "600270.SH",
+      "600275.SH",
+      "600277.SH",
+      "600286.SH",
+      "600290.SH",
+      "600291.SH",
+      "600296.SH",
+      "600297.SH",
+      "600311.SH",
+      "600317.SH",
+      "600321.SH",
+      "600355.SH",
+      "600357.SH",
+      "600385.SH",
+      "600387.SH",
+      "600393.SH",
+      "600401.SH",
+      "600421.SH",
+      "600432.SH",
+      "600462.SH",
+      "600466.SH",
+      "600472.SH",
+      "600485.SH",
+      "600532.SH",
+      "600553.SH",
+      "600555.SH",
+      "600565.SH",
+      "600591.SH",
+      "600599.SH",
+      "600607.SH",
+      "600608.SH",
+      "600614.SH",
+      "600625.SH",
+      "600627.SH",
+      "600631.SH",
+      "600634.SH",
+      "600636.SH",
+      "600646.SH",
+      "600647.SH",
+      "600652.SH",
+      "600656.SH",
+      "600659.SH",
+      "600669.SH",
+      "600670.SH",
+      "600672.SH",
+      "600677.SH",
+      "600680.SH",
+      "600687.SH",
+      "600695.SH",
+      "600696.SH",
+      "600701.SH",
+      "600705.SH",
+      "600709.SH",
+      "600747.SH",
+      "600752.SH",
+      "600762.SH",
+      "600766.SH",
+      "600767.SH",
+      "600772.SH",
+      "600781.SH",
+      "600786.SH",
+      "600788.SH",
+      "600799.SH",
+      "600804.SH",
+      "600806.SH",
+      "600811.SH",
+      "600813.SH",
+      "600823.SH",
+      "600832.SH",
+      "600836.SH",
+      "600837.SH",
+      "600840.SH",
+      "600842.SH",
+      "600849.SH",
+      "600852.SH",
+      "600856.SH",
+      "600870.SH",
+      "600878.SH",
+      "600890.SH",
+      "600891.SH",
+      "600896.SH",
+      "600898.SH",
+      "600899.SH",
+      "600978.SH",
+      "600991.SH",
+      "601028.SH",
+      "601258.SH",
+      "601268.SH",
+      "601299.SH",
+      "601313.SH",
+      "601558.SH",
+      "601989.SH",
+      "603003.SH",
+      "603056.SH",
+      "603133.SH",
+      "603157.SH",
+      "603388.SH",
+      "603555.SH",
+      "603603.SH",
+      "603963.SH",
+      "603996.SH",
+      "605081.SH",
+      "688086.SH",
+      "688287.SH",
+      "688555.SH",
+      "830779.BJ",
+      "830799.BJ",
+      "830809.BJ",
+      "830832.BJ",
+      "830879.BJ",
+      "830896.BJ",
+      "830946.BJ",
+      "830964.BJ",
+      "830974.BJ",
+      "831175.BJ",
+      "831195.BJ",
+      "831278.BJ",
+      "831396.BJ",
+      "831627.BJ",
+      "831641.BJ",
+      "831726.BJ",
+      "831768.BJ",
+      "831832.BJ",
+      "831834.BJ",
+      "831856.BJ",
+      "831906.BJ",
+      "831961.BJ",
+      "832000.BJ",
+      "832089.BJ",
+      "832110.BJ",
+      "832145.BJ",
+      "832149.BJ",
+      "832171.BJ",
+      "832225.BJ",
+      "832278.BJ",
+      "832419.BJ",
+      "832469.BJ",
+      "832491.BJ",
+      "832522.BJ",
+      "832651.BJ",
+      "832786.BJ",
+      "832802.BJ",
+      "832876.BJ",
+      "832885.BJ",
+      "832978.BJ",
+      "832982.BJ",
+      "833030.BJ",
+      "833171.BJ",
+      "833284.BJ",
+      "833394.BJ",
+      "833429.BJ",
+      "833454.BJ",
+      "833509.BJ",
+      "833523.BJ",
+      "833533.BJ",
+      "833580.BJ",
+      "833873.BJ",
+      "833914.BJ",
+      "834021.BJ",
+      "834058.BJ",
+      "834062.BJ",
+      "834407.BJ",
+      "834415.BJ",
+      "834599.BJ",
+      "834639.BJ",
+      "834682.BJ",
+      "834765.BJ",
+      "834770.BJ",
+      "835179.BJ",
+      "835184.BJ",
+      "835185.BJ",
+      "835207.BJ",
+      "835237.BJ",
+      "835305.BJ",
+      "835368.BJ",
+      "835438.BJ",
+      "835508.BJ",
+      "835579.BJ",
+      "835670.BJ",
+      "835892.BJ",
+      "835985.BJ",
+      "836077.BJ",
+      "836221.BJ",
+      "836239.BJ",
+      "836247.BJ",
+      "836263.BJ",
+      "836270.BJ",
+      "836414.BJ",
+      "836699.BJ",
+      "836826.BJ",
+      "836871.BJ",
+      "836957.BJ",
+      "837023.BJ",
+      "837046.BJ",
+      "837092.BJ",
+      "837242.BJ",
+      "837344.BJ",
+      "837403.BJ",
+      "837592.BJ",
+      "837663.BJ",
+      "837748.BJ",
+      "838163.BJ",
+      "838171.BJ",
+      "838227.BJ",
+      "838262.BJ",
+      "838275.BJ",
+      "838402.BJ",
+      "838837.BJ",
+      "838924.BJ",
+      "838971.BJ",
+      "839167.BJ",
+      "839273.BJ",
+      "839371.BJ",
+      "839493.BJ",
+      "839680.BJ",
+      "839729.BJ",
+      "839790.BJ",
+      "839792.BJ",
+      "839946.BJ",
+      "870199.BJ",
+      "870299.BJ",
+      "870357.BJ",
+      "870436.BJ",
+      "870726.BJ",
+      "871263.BJ",
+      "871396.BJ",
+      "871478.BJ",
+      "871553.BJ",
+      "871642.BJ",
+      "871694.BJ",
+      "872392.BJ",
+      "872541.BJ",
+      "872808.BJ",
+      "872953.BJ",
+      "873001.BJ",
+      "873132.BJ",
+      "873152.BJ",
+      "873223.BJ",
+      "873527.BJ",
+      "873665.BJ",
+      "873679.BJ",
+      "873690.BJ",
+      "873703.BJ",
+      "873806.BJ",
+      "920298.BJ"
+    ],
+    "latest_quote_time": "2026-09-11T15:31:51",
+    "market_status": "closed",
+    "missing_tick_first_100": [
+      "000003.SZ",
+      "000004.SZ",
+      "000005.SZ",
+      "000013.SZ",
+      "000015.SZ",
+      "000018.SZ",
+      "000022.SZ",
+      "000023.SZ",
+      "000024.SZ",
+      "000033.SZ",
+      "000038.SZ",
+      "000040.SZ",
+      "000043.SZ",
+      "000046.SZ",
+      "000047.SZ",
+      "000150.SZ",
+      "000405.SZ",
+      "000406.SZ",
+      "000412.SZ",
+      "000413.SZ",
+      "000418.SZ",
+      "000502.SZ",
+      "000508.SZ",
+      "000511.SZ",
+      "000515.SZ",
+      "000522.SZ",
+      "000527.SZ",
+      "000535.SZ",
+      "000540.SZ",
+      "000542.SZ",
+      "000556.SZ",
+      "000562.SZ",
+      "000569.SZ",
+      "000578.SZ",
+      "000583.SZ",
+      "000584.SZ",
+      "000585.SZ",
+      "000587.SZ",
+      "000588.SZ",
+      "000594.SZ",
+      "000602.SZ",
+      "000606.SZ",
+      "000611.SZ",
+      "000613.SZ",
+      "000616.SZ",
+      "000618.SZ",
+      "000621.SZ",
+      "000622.SZ",
+      "000627.SZ",
+      "000638.SZ",
+      "000653.SZ",
+      "000658.SZ",
+      "000660.SZ",
+      "000662.SZ",
+      "000666.SZ",
+      "000667.SZ",
+      "000671.SZ",
+      "000673.SZ",
+      "000675.SZ",
+      "000687.SZ",
+      "000689.SZ",
+      "000693.SZ",
+      "000699.SZ",
+      "000730.SZ",
+      "000732.SZ",
+      "000748.SZ",
+      "000760.SZ",
+      "000763.SZ",
+      "000765.SZ",
+      "000769.SZ",
+      "000780.SZ",
+      "000805.SZ",
+      "000806.SZ",
+      "000817.SZ",
+      "000827.SZ",
+      "000832.SZ",
+      "000835.SZ",
+      "000836.SZ",
+      "000851.SZ",
+      "000861.SZ",
+      "000866.SZ",
+      "000916.SZ",
+      "000918.SZ",
+      "000939.SZ",
+      "000956.SZ",
+      "000961.SZ",
+      "000971.SZ",
+      "000976.SZ",
+      "000979.SZ",
+      "000982.SZ",
+      "000996.SZ",
+      "002002.SZ",
+      "002013.SZ",
+      "002018.SZ",
+      "002070.SZ",
+      "002071.SZ",
+      "002087.SZ",
+      "002089.SZ",
+      "002113.SZ",
+      "002118.SZ"
+    ],
+    "missing_by_market": {
+      "SH": {
+        "raw": 2462,
+        "tick_returned": 2318,
+        "valid": 2318,
+        "missing": 144
+      },
+      "SZ": {
+        "raw": 3096,
+        "tick_returned": 2901,
+        "valid": 2896,
+        "missing": 195
+      },
+      "BJ": {
+        "raw": 491,
+        "tick_returned": 343,
+        "valid": 343,
+        "missing": 148
+      }
+    },
+    "missing_reason_counts": {
+      "delisted": 0,
+      "listing_suspended": 0,
+      "suspended": 0,
+      "new_stock_not_listed": 0,
+      "beijing_code_compatibility": 0,
+      "quote_permission_missing": 0,
+      "non_a_share_misclassified": 0,
+      "sector_history_residual": 0,
+      "unknown": 487
+    },
+    "missing_classification": [
+      {
+        "code": "000003.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000004.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000005.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000013.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000015.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000018.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000022.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000023.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000024.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000033.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000038.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000040.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000043.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000046.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000047.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000150.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000405.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000406.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000412.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000413.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000418.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000502.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000508.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000511.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000515.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000522.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000527.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000535.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000540.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000542.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000556.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000562.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000569.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000578.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000583.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000584.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000585.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000587.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000588.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000594.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000602.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000606.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000611.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000613.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000616.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000618.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000621.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000622.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000627.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000638.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000653.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000658.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000660.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000662.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000666.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000667.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000671.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000673.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000675.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000687.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000689.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000693.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000699.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000730.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000732.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000748.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000760.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000763.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000765.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000769.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000780.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000805.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000806.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000817.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000827.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000832.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000835.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000836.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000851.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000861.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000866.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000916.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000918.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000939.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000956.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000961.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000971.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000976.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000979.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000982.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "000996.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002002.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002013.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002018.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002070.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002071.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002087.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002089.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002113.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002118.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002143.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002147.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002220.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002231.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002257.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002260.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002280.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002288.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002308.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002325.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002336.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002341.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002359.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002411.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002417.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002433.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002435.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002447.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002450.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002464.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002473.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002477.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002499.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002502.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002503.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002504.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002505.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002509.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002525.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002604.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002610.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002618.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002619.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002621.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002665.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002680.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002684.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002699.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002710.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002711.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002720.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002740.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002750.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002751.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002770.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002776.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002781.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002808.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "002898.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300023.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300028.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300029.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300038.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300060.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300064.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300089.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300090.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300104.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300108.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300114.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300116.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300117.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300156.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300178.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300186.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300202.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300208.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300216.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300262.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300273.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300280.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300282.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300297.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300309.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300312.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300325.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300330.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300336.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300344.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300356.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300361.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300362.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300367.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300372.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300379.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300391.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300392.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300431.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300495.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300526.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300630.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300646.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300742.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "300799.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "301716.SZ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SZ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430198.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430418.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430425.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430476.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430489.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430556.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430564.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "430685.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600001.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600002.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600003.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600005.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600065.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600068.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600069.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600070.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600074.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600077.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600083.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600086.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600087.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600090.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600091.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600092.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600093.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600102.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600112.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600122.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600139.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600145.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600146.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600175.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600181.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600190.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600193.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600200.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600205.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600209.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600213.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600220.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600225.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600240.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600242.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600247.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600253.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600260.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600263.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600270.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600275.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600277.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600286.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600290.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600291.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600296.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600297.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600311.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600317.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600321.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600355.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600357.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600385.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600387.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600393.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600401.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600421.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600432.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600462.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600466.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600472.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600485.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600532.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600553.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600555.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600565.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600591.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600599.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600607.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600608.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600614.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600625.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600627.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600631.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600634.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600636.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600646.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600647.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600652.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600656.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600659.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600669.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600670.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600672.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600677.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600680.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600687.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600695.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600696.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600701.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600705.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600709.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600747.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600752.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600762.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600766.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600767.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600772.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600781.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600786.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600788.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600799.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600804.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600806.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600811.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600813.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600823.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600832.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600836.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600837.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600840.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600842.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600849.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600852.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600856.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600870.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600878.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600890.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600891.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600896.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600898.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600899.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600978.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "600991.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601028.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601258.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601268.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601299.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601313.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601558.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "601989.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603003.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603056.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603133.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603157.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603388.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603555.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603603.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603963.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "603996.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "605081.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "688086.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "688287.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "688555.SH",
+        "reason": "unknown",
+        "evidence": {
+          "market": "SH",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830779.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830799.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830809.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830832.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830879.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830896.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830946.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830964.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "830974.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831175.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831195.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831278.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831396.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831627.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831641.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831726.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831768.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831832.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831834.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831856.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831906.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "831961.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832000.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832089.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832110.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832145.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832149.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832171.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832225.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832278.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832419.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832469.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832491.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832522.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832651.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832786.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832802.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832876.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832885.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832978.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "832982.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833030.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833171.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833284.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833394.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833429.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833454.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833509.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833523.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833533.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833580.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833873.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "833914.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834021.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834058.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834062.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834407.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834415.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834599.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834639.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834682.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834765.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "834770.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835179.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835184.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835185.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835207.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835237.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835305.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835368.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835438.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835508.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835579.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835670.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835892.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "835985.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836077.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836221.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836239.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836247.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836263.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836270.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836414.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836699.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836826.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836871.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "836957.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837023.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837046.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837092.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837242.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837344.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837403.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837592.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837663.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "837748.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838163.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838171.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838227.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838262.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838275.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838402.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838837.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838924.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "838971.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839167.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839273.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839371.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839493.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839680.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839729.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839790.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839792.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "839946.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "870199.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "870299.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "870357.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "870436.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "870726.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871263.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871396.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871478.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871553.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871642.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "871694.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "872392.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "872541.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "872808.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "872953.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873001.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873132.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873152.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873223.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873527.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873665.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873679.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873690.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873703.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "873806.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      },
+      {
+        "code": "920298.BJ",
+        "reason": "unknown",
+        "evidence": {
+          "market": "BJ",
+          "instrument_detail": "unavailable"
+        }
+      }
+    ],
+    "invalid_returned_symbols": [
+      "000016.SZ",
+      "002731.SZ",
+      "002870.SZ",
+      "301139.SZ",
+      "301390.SZ"
+    ],
+    "bj_sample": [
+      {
+        "code": "920000.BJ",
+        "name": "���շ��",
+        "lastPrice": 13.55,
+        "lastClose": 13.89,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920046.BJ",
+        "name": "���ܵ���",
+        "lastPrice": 21.47,
+        "lastClose": 22.15,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920096.BJ",
+        "name": "XD�γ���",
+        "lastPrice": 30.29,
+        "lastClose": 31.52,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920160.BJ",
+        "name": "������",
+        "lastPrice": 18.75,
+        "lastClose": 19.1,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920208.BJ",
+        "name": "��ؼ���",
+        "lastPrice": 11.46,
+        "lastClose": 12.13,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920284.BJ",
+        "name": "���Ƽ�",
+        "lastPrice": 15.64,
+        "lastClose": 16.11,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920429.BJ",
+        "name": "������",
+        "lastPrice": 10.18,
+        "lastClose": 10.72,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920571.BJ",
+        "name": "����Զ��",
+        "lastPrice": 9.44,
+        "lastClose": 9.83,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920717.BJ",
+        "name": "���ǹɷ�",
+        "lastPrice": 6.78,
+        "lastClose": 7,
+        "InstrumentStatus": 0
+      },
+      {
+        "code": "920855.BJ",
+        "name": "�㽭��ũ",
+        "lastPrice": 13.54,
+        "lastClose": 13.9,
+        "InstrumentStatus": 0
+      }
+    ]
+  },
+  "cached_rounds": [
+    {
+      "round": 1,
+      "tick_seconds": 0.983604799999739,
+      "indicator_seconds": 0.264004799999384,
+      "filter_seconds": 0.002161200001864927,
+      "total_seconds": 1.257171199998993,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 2,
+      "tick_seconds": 0.9989704999970854,
+      "indicator_seconds": 0.2596397999986948,
+      "filter_seconds": 0.0020374000014271587,
+      "total_seconds": 1.2679164000001037,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 3,
+      "tick_seconds": 1.0449512999985018,
+      "indicator_seconds": 0.2583481000001484,
+      "filter_seconds": 0.001933900002768496,
+      "total_seconds": 1.3125460000010207,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 4,
+      "tick_seconds": 1.000278999999864,
+      "indicator_seconds": 0.25836790000175824,
+      "filter_seconds": 0.0018928999998024665,
+      "total_seconds": 1.2677626999975473,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 5,
+      "tick_seconds": 0.9799864999986312,
+      "indicator_seconds": 0.25876159999825177,
+      "filter_seconds": 0.0017809000019042287,
+      "total_seconds": 1.2477789000004122,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 6,
+      "tick_seconds": 1.0670089999985066,
+      "indicator_seconds": 0.25948670000070706,
+      "filter_seconds": 0.0017866999987745658,
+      "total_seconds": 1.3354338999997708,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 7,
+      "tick_seconds": 0.9774326999977347,
+      "indicator_seconds": 0.2599716999975499,
+      "filter_seconds": 0.002099199999065604,
+      "total_seconds": 1.2468869000003906,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 8,
+      "tick_seconds": 1.009064000001672,
+      "indicator_seconds": 0.2606307999994897,
+      "filter_seconds": 0.002229300000180956,
+      "total_seconds": 1.2794512000000395,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 9,
+      "tick_seconds": 1.049009299997124,
+      "indicator_seconds": 0.2667469000007259,
+      "filter_seconds": 0.0022686000011162832,
+      "total_seconds": 1.3254841000016313,
+      "valid_quotes": 5557
+    },
+    {
+      "round": 10,
+      "tick_seconds": 1.0068469000034383,
+      "indicator_seconds": 0.2584167000022717,
+      "filter_seconds": 0.002170499999920139,
+      "total_seconds": 1.274809099999402,
+      "valid_quotes": 5557
+    }
+  ],
+  "cached_summary": {
+    "tick_seconds": {
+      "average": 1.0117153999992297,
+      "p95": 1.0670089999985066,
+      "maximum": 1.0670089999985066
+    },
+    "indicator_seconds": {
+      "average": 0.2604374999998981,
+      "p95": 0.2667469000007259,
+      "maximum": 0.2667469000007259
+    },
+    "filter_seconds": {
+      "average": 0.0020360600006824824,
+      "p95": 0.0022686000011162832,
+      "maximum": 0.0022686000011162832
+    },
+    "total_seconds": {
+      "average": 1.281524039999931,
+      "p95": 1.3354338999997708,
+      "maximum": 1.3354338999997708
+    }
+  }
+}

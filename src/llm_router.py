@@ -34,6 +34,8 @@ class RouterResult:
     requested_model: str | None = None
     actual_model: str | None = None
     fallback_reason: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
 
 
 def load_role_config(path: str | Path | None = None) -> dict[str, dict[str, str]]:

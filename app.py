@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from src.agent import StockResearchAgent
 from src.llm_router import load_role_config
 from src.model_registry import ModelRegistry
+from src.market_data_router import MarketDataRouter
 from src.qmt_provider import QMTProvider
 from src.scanner import MarketScanner
 
@@ -14,20 +15,32 @@ st.set_page_config(page_title="全A多模型分析 Agent", page_icon="📈", lay
 st.title("📈 全A多模型分析 Agent")
 st.caption("本机 QMT/xtquant 真实行情；研究辅助工具，不执行任何交易。")
 
-provider = QMTProvider()
-status = provider.status()
-if status.ok:
-    st.success(status.message)
+@st.cache_resource
+def market_resources(qmt_path: str, qmt_port: int, token_configured: bool):
+    router = MarketDataRouter(qmt_factory=lambda: QMTProvider(qmt_path=qmt_path, port=qmt_port))
+    selection = router.select()
+    scanner = MarketScanner(selection.provider) if selection.provider else None
+    return router, selection, scanner
+
+
+qmt_defaults = QMTProvider()
+market_router, market_selection, scanner = market_resources(
+    qmt_defaults.qmt_path, qmt_defaults.port, bool(os.getenv("XTDC_TOKEN", "").strip())
+)
+provider = market_selection.provider
+status_ok = provider is not None
+if market_selection.status == "connected":
+    st.success("当前Provider：XtDataCenter Token｜🟢 已连接｜Token剩余有效期：unknown")
+elif market_selection.status == "fallback":
+    st.warning("当前Provider：QMT Local｜🟡 fallback｜Token剩余有效期：unknown")
 else:
-    st.error(f"QMT 未连接，实时筛选已停止：{status.message}")
+    st.error(f"行情源不可用，实时筛选已停止：{market_selection.reason}")
+st.caption(f"Fallback：QMT Local｜{market_selection.qmt_fallback_status}")
+provider_audit = getattr(provider, "universe_audit", None) if provider else None
+if provider_audit:
+    st.caption(f"行情状态：{provider_audit['market_status']}｜最新行情时间：{provider_audit['latest_quote_time']}")
 
 scan_tab, stock_tab, employees_tab, diagnostic_tab = st.tabs(["全A实时筛选", "单股研究", "AI员工", "行情诊断"])
-
-@st.cache_resource
-def scanner_resource(qmt_path: str, qmt_port: int) -> MarketScanner:
-    return MarketScanner(QMTProvider(qmt_path=qmt_path, port=qmt_port))
-
-scanner = scanner_resource(provider.qmt_path, provider.port)
 
 @st.cache_resource
 def workforce_resource() -> StockResearchAgent:
@@ -37,7 +50,7 @@ workforce = workforce_resource()
 
 with scan_tab:
     top_n = st.number_input("显示数量", min_value=10, max_value=100, value=30, step=10)
-    if st.button("运行全A真实行情筛选", type="primary", disabled=not status.ok):
+    if st.button("运行全A真实行情筛选", type="primary", disabled=not status_ok):
         progress = st.progress(0, text="正在初始化历史指标……")
         def update_progress(value, message):
             progress.progress(min(float(value), 1.0), text=message)
@@ -45,11 +58,20 @@ with scan_tab:
             result = scanner.scan(int(top_n), progress_callback=update_progress)
         progress.progress(1.0, text="初始化及扫描完成")
         metrics = result.diagnostics
-        cols = st.columns(4)
-        cols[0].metric("股票池", metrics.stock_pool_size)
-        cols[1].metric("get_full_tick 返回", metrics.full_tick_count)
-        cols[2].metric("有效行情", metrics.valid_quote_count)
-        cols[3].metric("筛选耗时", f"{metrics.elapsed_seconds:.2f}s")
+        audit = getattr(provider, "universe_audit", None)
+        cols = st.columns(5)
+        cols[0].metric("原始股票池", audit["raw_count"] if audit else metrics.stock_pool_size)
+        cols[1].metric("可扫描股票池", metrics.stock_pool_size)
+        cols[2].metric("get_full_tick 返回", metrics.full_tick_count)
+        cols[3].metric("有效行情", metrics.valid_quote_count)
+        cols[4].metric("筛选耗时", f"{metrics.elapsed_seconds:.2f}s")
+        if audit:
+            st.caption(f"行情状态：{audit['market_status']}｜最新行情时间：{audit['latest_quote_time']}")
+            with st.expander(f"缺失 tick 审计：{audit['missing_tick_count']} 只"):
+                st.json({"按市场": audit["missing_by_market"], "原因分类": audit["missing_reason_counts"],
+                         "前100只": audit["missing_tick_first_100"],
+                         "无效 tick 数量": audit["invalid_returned_count"],
+                         "无效 tick 代码": audit["invalid_returned_symbols"]})
         if result.unavailable_fields:
             st.warning("QMT 基础数据无法可靠计算：" + "、".join(result.unavailable_fields))
         display_rows = pd.DataFrame(result.rows)
@@ -61,7 +83,7 @@ with stock_tab:
     max_mode = st.checkbox("MAX 深度研究模式", value=False,
                            help="增加响应时间和 Token/API 成本，适合重大持仓、深度研究或高风险决策。")
     symbol = st.text_input("股票代码", "600498.SH", help="例如：600498.SH、000001.SZ")
-    if st.button("读取真实行情并分析", disabled=not status.ok):
+    if st.button("读取真实行情并分析", disabled=not status_ok):
         normalized_symbol = symbol.strip().upper()
         quote = provider.get_quote(normalized_symbol)
         if not quote:
@@ -131,13 +153,18 @@ with employees_tab:
 with diagnostic_tab:
     st.subheader("xtquant 运行时来源")
     try:
-        st.json(provider.runtime_info())
+        runtime_attr = getattr(provider, "runtime_info", {})
+        runtime = runtime_attr() if callable(runtime_attr) else runtime_attr
+        st.json(runtime)
     except Exception as exc:
         st.error(f"xtquant 组件检查失败，生产运行已停止：{exc}")
-    st.json(provider.connection_diagnostics().to_dict())
-    if st.button("执行完整行情诊断", disabled=not status.ok):
+    if provider:
+        st.json(provider.connection_diagnostics().to_dict())
+    else:
+        st.error(market_selection.reason)
+    if st.button("执行完整行情诊断", disabled=not status_ok or not hasattr(provider, "diagnose")):
         with st.spinner("验证股票池与全量 get_full_tick…"):
             st.json(provider.diagnose(include_market_sample=True).to_dict())
-    if st.button("比较全市场与分批 get_full_tick", disabled=not status.ok):
+    if st.button("比较全市场与分批 get_full_tick", disabled=not status_ok):
         with st.spinner("正在执行两种真实全市场读取方式…"):
             st.json(scanner.compare_tick_strategies())

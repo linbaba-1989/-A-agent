@@ -41,7 +41,9 @@ def test_four_employees_run_in_parallel_then_chief_and_share_analysis_id():
     assert set(result["employees"]) == {"technical_analyst", "fundamental_event_analyst",
                                         "sentiment_analyst", "risk_officer"}
     assert result["analysis_id"].startswith("600000.SH_")
+    assert result["analysis_id"].endswith("_standard")
     assert result["fact_data"] == facts
+    assert all(row["start_time"] and row["end_time"] for row in result["employees"].values())
 
 
 def test_failed_employee_is_unavailable_but_chief_still_runs():

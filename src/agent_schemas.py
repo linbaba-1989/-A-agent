@@ -5,50 +5,52 @@ class TechnicalReport(BaseModel):
     trend: str
     momentum: str
     volume_price: str
+    moving_average_structure: str
     support: list[float | str]
     resistance: list[float | str]
+    breakout_status: str
     bullish_signals: list[str]
     bearish_signals: list[str]
+    data_gaps: list[str]
     confidence: int = Field(ge=0, le=100)
     summary: str
 
 
 class FundamentalEventReport(BaseModel):
     confirmed_facts: list[str]
-    events_to_verify: list[str]
-    industry_changes: list[str]
-    catalysts: list[str]
-    risks: list[str]
+    available_fundamental_data: list[str] | str
+    event_data: list[str] | str
+    missing_data: list[str]
+    possible_implications: list[str]
     confidence: int = Field(ge=0, le=100)
     summary: str
 
 
 class SentimentReport(BaseModel):
-    market_sentiment: str
-    sector_heat: str
-    theme_strength: str
-    news_sentiment: str
-    capital_preference: str
-    uncertainties: list[str]
+    confirmed_market_signals: list[str]
+    momentum_sentiment: str
+    volume_sentiment: str
+    crowding_risk: str
+    missing_sentiment_data: list[str]
     confidence: int = Field(ge=0, le=100)
     summary: str
 
 
 class RiskReport(BaseModel):
-    risk_points: list[str]
-    valuation_risk: str
-    technical_breakdown: str
-    crowding_risk: str
-    black_swan_risks: list[str]
-    missing_data: list[str]
+    technical_risks: list[str]
+    data_quality_risks: list[str]
+    positioning_risks: list[str]
+    bull_case_challenges: list[str]
+    invalid_assumptions: list[str]
+    missing_information: list[str]
+    risk_level: str
     confidence: int = Field(ge=0, le=100)
     summary: str
 
 
 class ChiefReport(BaseModel):
     confirmed_facts: list[str]
-    inferences: list[str]
-    uncertainties: list[str]
+    data_gaps: list[str]
     bull_case: list[str]
     bear_case: list[str]
     key_catalysts: list[str]
@@ -57,5 +59,7 @@ class ChiefReport(BaseModel):
     fundamental_view: str
     sentiment_view: str
     risk_view: str
+    points_of_agreement: list[str]
+    points_of_disagreement: list[str]
     confidence: int = Field(ge=0, le=100)
     final_summary: str

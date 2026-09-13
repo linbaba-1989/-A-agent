@@ -33,25 +33,35 @@ class StockResearchAgent:
         return (self.prompt_dir / PROMPT_FILES[role]).read_text(encoding="utf-8")
 
     @staticmethod
-    def analysis_id(symbol: str, now: datetime | None = None) -> str:
-        return f"{symbol}_{(now or datetime.now()).strftime('%Y%m%d_%H%M%S')}"
+    def analysis_id(symbol: str, analysis_mode: str = "standard", now: datetime | None = None) -> str:
+        return f"{symbol}_{(now or datetime.now()).strftime('%Y%m%d_%H%M%S')}_{analysis_mode}"
 
     def _role_call(self, role: str, facts: dict[str, Any], analysis_id: str, analysis_mode: str) -> RouterResult:
         messages = [{"role": "system", "content": self._prompt(role)},
                     {"role": "user", "content": "FACT DATA（只读）：\n" + json.dumps(facts, ensure_ascii=False, default=str)}]
         return self.router.call(role, messages, ROLE_SCHEMAS[role], analysis_id, analysis_mode)
 
+    def _timed_role_call(self, role: str, facts: dict[str, Any], analysis_id: str,
+                         analysis_mode: str) -> tuple[RouterResult, str, str]:
+        started = datetime.now().astimezone().isoformat(timespec="milliseconds")
+        result = self._role_call(role, facts, analysis_id, analysis_mode)
+        ended = datetime.now().astimezone().isoformat(timespec="milliseconds")
+        return result, started, ended
+
     def analyze(self, symbol: str, fact_data: dict[str, Any], analysis_mode: str = "standard") -> dict[str, Any]:
-        analysis_id = self.analysis_id(symbol)
+        analysis_id = self.analysis_id(symbol, analysis_mode)
         immutable_facts = json.loads(json.dumps(fact_data, ensure_ascii=False, default=str))
         role_results: dict[str, RouterResult] = {}
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-employee") as pool:
-            futures = {pool.submit(self._role_call, role, immutable_facts, analysis_id, analysis_mode): role
+            futures = {pool.submit(self._timed_role_call, role, immutable_facts, analysis_id, analysis_mode): role
                        for role in ROLE_SCHEMAS}
             for future in as_completed(futures):
                 role = futures[future]
                 try:
-                    role_results[role] = future.result()
+                    result, started, ended = future.result()
+                    result.start_time = started
+                    result.end_time = ended
+                    role_results[role] = result
                 except Exception as exc:
                     role_results[role] = RouterResult(role, None, None, False, None, 0.0,
                                                       error=f"{type(exc).__name__}: {exc}")
@@ -60,7 +70,10 @@ class StockResearchAgent:
                           {"role": "user", "content": json.dumps(
                               {"analysis_id": analysis_id, "FACT DATA": immutable_facts,
                                "role_reports": chief_input}, ensure_ascii=False, default=str)}]
+        chief_started = datetime.now().astimezone().isoformat(timespec="milliseconds")
         chief = self.router.call("chief_researcher", chief_messages, ChiefReport, analysis_id, analysis_mode)
+        chief.start_time = chief_started
+        chief.end_time = datetime.now().astimezone().isoformat(timespec="milliseconds")
         return {"analysis_id": analysis_id, "analysis_mode": analysis_mode,
                 "symbol": symbol, "fact_data": immutable_facts,
                 "employees": {role: vars(result) for role, result in role_results.items()},
