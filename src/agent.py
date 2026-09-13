@@ -36,17 +36,18 @@ class StockResearchAgent:
     def analysis_id(symbol: str, now: datetime | None = None) -> str:
         return f"{symbol}_{(now or datetime.now()).strftime('%Y%m%d_%H%M%S')}"
 
-    def _role_call(self, role: str, facts: dict[str, Any], analysis_id: str) -> RouterResult:
+    def _role_call(self, role: str, facts: dict[str, Any], analysis_id: str, analysis_mode: str) -> RouterResult:
         messages = [{"role": "system", "content": self._prompt(role)},
                     {"role": "user", "content": "FACT DATA（只读）：\n" + json.dumps(facts, ensure_ascii=False, default=str)}]
-        return self.router.call(role, messages, ROLE_SCHEMAS[role], analysis_id)
+        return self.router.call(role, messages, ROLE_SCHEMAS[role], analysis_id, analysis_mode)
 
-    def analyze(self, symbol: str, fact_data: dict[str, Any]) -> dict[str, Any]:
+    def analyze(self, symbol: str, fact_data: dict[str, Any], analysis_mode: str = "standard") -> dict[str, Any]:
         analysis_id = self.analysis_id(symbol)
         immutable_facts = json.loads(json.dumps(fact_data, ensure_ascii=False, default=str))
         role_results: dict[str, RouterResult] = {}
         with ThreadPoolExecutor(max_workers=4, thread_name_prefix="ai-employee") as pool:
-            futures = {pool.submit(self._role_call, role, immutable_facts, analysis_id): role for role in ROLE_SCHEMAS}
+            futures = {pool.submit(self._role_call, role, immutable_facts, analysis_id, analysis_mode): role
+                       for role in ROLE_SCHEMAS}
             for future in as_completed(futures):
                 role = futures[future]
                 try:
@@ -59,7 +60,8 @@ class StockResearchAgent:
                           {"role": "user", "content": json.dumps(
                               {"analysis_id": analysis_id, "FACT DATA": immutable_facts,
                                "role_reports": chief_input}, ensure_ascii=False, default=str)}]
-        chief = self.router.call("chief_researcher", chief_messages, ChiefReport, analysis_id)
-        return {"analysis_id": analysis_id, "symbol": symbol, "fact_data": immutable_facts,
+        chief = self.router.call("chief_researcher", chief_messages, ChiefReport, analysis_id, analysis_mode)
+        return {"analysis_id": analysis_id, "analysis_mode": analysis_mode,
+                "symbol": symbol, "fact_data": immutable_facts,
                 "employees": {role: vars(result) for role, result in role_results.items()},
                 "chief_researcher": vars(chief)}

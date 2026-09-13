@@ -67,6 +67,102 @@ def test_primary_retries_before_fallback(monkeypatch, tmp_path):
     assert [name for name, _ in calls] == ["primary", "primary"]
 
 
+def test_provider_temperature_capability_is_used_by_healthcheck(monkeypatch, tmp_path):
+    monkeypatch.setenv("KIMI_KEY", "configured")
+    monkeypatch.setenv("DEEPSEEK_KEY", "configured")
+    monkeypatch.setenv("QWEN_KEY", "configured")
+    providers = {
+        "kimi": ProviderConfig("kimi", "kimi-k2.6", None, "KIMI_KEY", fixed_temperature=1.0),
+        "deepseek": ProviderConfig("deepseek", "deepseek-chat", None, "DEEPSEEK_KEY"),
+        "qwen": ProviderConfig("qwen", "qwen-plus", None, "QWEN_KEY"),
+    }
+    calls = []
+
+    def factory(provider):
+        def create(**kwargs):
+            calls.append((provider.provider_name, kwargs))
+            return response('{"ok":true}')
+        return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    router = LLMRouter(ModelRegistry(providers),
+                       {"role": {"primary": "kimi", "fallback": "deepseek"}},
+                       UsageTracker(tmp_path / "usage.jsonl"), factory)
+    assert router.healthcheck("kimi")["success"]
+    assert router.healthcheck("deepseek")["success"]
+    assert router.healthcheck("qwen")["success"]
+    temperatures = {name: kwargs["temperature"] for name, kwargs in calls}
+    assert temperatures == {"kimi": 1.0, "deepseek": 0, "qwen": 0}
+
+
+def test_deepseek_v4_profiles_send_reasoning_without_temperature(monkeypatch, tmp_path):
+    monkeypatch.setenv("DEEPSEEK_KEY", "configured")
+    provider = ProviderConfig("deepseek", "deepseek-v4-pro", None, "DEEPSEEK_KEY", max_retries=0,
+                              supports_custom_temperature=False, supports_reasoning_effort=True,
+                              reasoning_levels=("low", "high", "max"), reasoning_mode="deepseek")
+    calls = []
+
+    def factory(_provider):
+        def create(**kwargs):
+            calls.append(kwargs)
+            return response()
+        return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    routes = {"role": {"candidates": [{"provider": "deepseek", "model": "deepseek-v4-pro",
+                                          "reasoning": {"standard": "high", "max": "max"}}]}}
+    router = LLMRouter(ModelRegistry({"deepseek": provider}), routes,
+                       UsageTracker(tmp_path / "usage.jsonl"), factory)
+    standard = router.call("role", [], Output, "S", "standard")
+    maximum = router.call("role", [], Output, "M", "max")
+    assert standard.reasoning_effort == "high" and maximum.reasoning_effort == "max"
+    assert [call["reasoning_effort"] for call in calls] == ["high", "max"]
+    assert all("temperature" not in call for call in calls)
+    assert all(call["extra_body"] == {"thinking": {"type": "enabled"}} for call in calls)
+
+
+def test_qwen_model_candidate_fallback_records_actual_model(monkeypatch, tmp_path):
+    monkeypatch.setenv("QWEN_KEY", "configured")
+    provider = ProviderConfig("qwen", "qwen3.8-max", None, "QWEN_KEY", max_retries=0)
+    calls = []
+
+    def factory(actual):
+        def create(**kwargs):
+            calls.append(kwargs["model"])
+            if actual.model_name == "qwen3.8-max":
+                raise PermissionError("model unavailable")
+            return response()
+        return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    routes = {"role": {"candidates": [{"provider": "qwen", "model": "qwen3.8-max"},
+                                         {"provider": "qwen", "model": "qwen3.7-plus"}]}}
+    router = LLMRouter(ModelRegistry({"qwen": provider}), routes,
+                       UsageTracker(tmp_path / "usage.jsonl"), factory)
+    result = router.call("role", [], Output, "Q")
+    assert result.success and result.fallback
+    assert result.requested_model == "qwen3.8-max"
+    assert result.actual_model == "qwen3.7-plus"
+    assert result.fallback_reason and "PermissionError" in result.fallback_reason
+    assert calls == ["qwen3.8-max", "qwen3.7-plus"]
+
+
+def test_kimi_k3_omits_unverified_temperature_and_reasoning(monkeypatch, tmp_path):
+    monkeypatch.setenv("KIMI_KEY", "configured")
+    base = ProviderConfig("kimi", "kimi-k3", None, "KIMI_KEY", max_retries=0)
+    calls = []
+
+    def factory(_provider):
+        def create(**kwargs):
+            calls.append(kwargs)
+            return response('{"ok":true}')
+        return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+    router = LLMRouter(ModelRegistry({"kimi": base}),
+                       {"role": {"candidates": [{"provider": "kimi", "model": "kimi-k3"}]}},
+                       UsageTracker(tmp_path / "usage.jsonl"), factory)
+    assert router.healthcheck("kimi", "kimi-k3")["success"]
+    assert "temperature" not in calls[0]
+    assert "reasoning_effort" not in calls[0]
+
+
 def test_bad_json_gets_one_format_repair(monkeypatch, tmp_path):
     router, calls = make_router(monkeypatch, tmp_path,
                                 {"primary": [response("not-json"), response('{"value":"fixed"}')], "fallback": []})

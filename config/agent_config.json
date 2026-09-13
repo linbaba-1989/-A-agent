@@ -1,9 +1,36 @@
 {
   "roles": {
-    "technical_analyst": {"primary": "deepseek", "fallback": "openai"},
-    "fundamental_event_analyst": {"primary": "qwen", "fallback": "kimi"},
-    "sentiment_analyst": {"primary": "doubao", "fallback": "kimi"},
-    "risk_officer": {"primary": "openai", "fallback": "deepseek"},
-    "chief_researcher": {"primary": "openai", "fallback": "deepseek"}
+    "technical_analyst": {
+      "candidates": [
+        {"provider": "deepseek", "model": "deepseek-v4-pro", "reasoning": {"standard": "high", "max": "max"}},
+        {"provider": "qwen", "model": "qwen3.8-max"},
+        {"provider": "qwen", "model": "qwen3.7-plus"}
+      ]
+    },
+    "fundamental_event_analyst": {
+      "candidates": [
+        {"provider": "qwen", "model": "qwen3.8-max"},
+        {"provider": "qwen", "model": "qwen3.7-plus"},
+        {"provider": "kimi", "model": "kimi-k3"}
+      ]
+    },
+    "sentiment_analyst": {
+      "candidates": [
+        {"provider": "doubao", "model_env": "DOUBAO_MODEL"},
+        {"provider": "kimi", "model": "kimi-k3"}
+      ]
+    },
+    "risk_officer": {
+      "candidates": [
+        {"provider": "kimi", "model": "kimi-k3"},
+        {"provider": "deepseek", "model": "deepseek-v4-pro", "reasoning": {"standard": "high", "max": "max"}}
+      ]
+    },
+    "chief_researcher": {
+      "candidates": [
+        {"provider": "deepseek", "model": "deepseek-v4-pro", "reasoning": {"standard": "high", "max": "max"}},
+        {"provider": "kimi", "model": "kimi-k3"}
+      ]
+    }
   }
 }

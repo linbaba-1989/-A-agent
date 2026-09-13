@@ -26,6 +26,11 @@ class UsageRecord:
     success: bool
     fallback: bool = False
     error: str | None = None
+    analysis_mode: str = "standard"
+    reasoning_effort: str | None = None
+    requested_model: str | None = None
+    actual_model: str | None = None
+    fallback_reason: str | None = None
 
 
 class UsageTracker:

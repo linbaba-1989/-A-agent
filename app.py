@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import streamlit as st
@@ -57,6 +58,8 @@ with scan_tab:
         st.dataframe(display_rows, width="stretch", hide_index=True)
 
 with stock_tab:
+    max_mode = st.checkbox("MAX 深度研究模式", value=False,
+                           help="增加响应时间和 Token/API 成本，适合重大持仓、深度研究或高风险决策。")
     symbol = st.text_input("股票代码", "600498.SH", help="例如：600498.SH、000001.SZ")
     if st.button("读取真实行情并分析", disabled=not status.ok):
         normalized_symbol = symbol.strip().upper()
@@ -72,10 +75,15 @@ with stock_tab:
                 else:
                     st.line_chart(history["close"])
             with st.spinner("研究中…"):
-                st.json(workforce.analyze(normalized_symbol, quote))
+                st.json(workforce.analyze(normalized_symbol, quote, "max" if max_mode else "standard"))
 
 with employees_tab:
     st.subheader("AI 员工管理")
+    employee_max_mode = st.checkbox("MAX 深度研究模式", value=False, key="employee_max_mode")
+    if employee_max_mode:
+        st.warning("🔥 MAX 深度研究模式：技术分析员与总研究员使用 DeepSeek V4-Pro / MAX。该模式会增加响应时间和 Token / API 成本。")
+    else:
+        st.info("研究模式：标准；技术分析员与总研究员使用 DeepSeek V4-Pro / High。")
     routes = load_role_config()
     registry = ModelRegistry()
     role_names = {"technical_analyst": "技术分析员", "fundamental_event_analyst": "基本面/事件分析员",
@@ -84,8 +92,13 @@ with employees_tab:
     usage = workforce.router.tracker.summary()
     employee_rows = []
     for role, route in routes.items():
+        candidates = route["candidates"]
+        primary_candidate = candidates[0]
+        primary_name = primary_candidate.get("model") or os.getenv(primary_candidate.get("model_env", ""), "当前 Endpoint")
+        fallback_names = [item.get("model") or os.getenv(item.get("model_env", ""), "当前 Endpoint")
+                          for item in candidates[1:]]
         recent = workforce.router.last_results.get(role)
-        primary = registry.get(route["primary"])
+        primary = registry.get(primary_candidate["provider"])
         state = "⚪ 未配置" if not primary.configured else "🟢 待命"
         runtime_state = workforce.router.role_states.get(role)
         if runtime_state == "working":
@@ -95,7 +108,8 @@ with employees_tab:
             if recent.fallback:
                 state = "🟡 fallback"
         totals = usage.get(role, {})
-        employee_rows.append({"员工岗位": role_names[role], "主模型": route["primary"], "备用模型": route["fallback"],
+        employee_rows.append({"员工岗位": role_names[role], "主模型": primary_name,
+                              "备用模型": " → ".join(fallback_names),
                               "工作状态": state, "最近任务": recent.analysis_id if recent else "-",
                               "最近耗时": recent.latency if recent else 0, "最近Token": recent.total_tokens if recent else 0,
                               "累计Token": int(totals.get("total_tokens", 0)),
@@ -103,7 +117,8 @@ with employees_tab:
                               "错误": recent.error if recent else None})
     st.dataframe(pd.DataFrame(employee_rows), width="stretch", hide_index=True)
     provider_rows = [{"Provider": item["provider_name"], "Model": item["model_name"],
-                      "状态": "🟢 已配置 / 待命" if item["configured"] else "🔴 未配置"}
+                      "状态": ("⚪ 暂停 / 未启用" if not item["enabled"] else
+                              "🟢 已配置 / 待命" if item["configured"] else "🔴 未配置")}
                      for item in registry.statuses()]
     st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
     st.caption("页面加载只检查配置，不发送模型请求。")

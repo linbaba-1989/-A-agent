@@ -19,7 +19,7 @@ class FakeRouter:
         self.tracker = FakeTracker()
         self.last_results = {}
 
-    def call(self, role, messages, schema, analysis_id):
+    def call(self, role, messages, schema, analysis_id, analysis_mode="standard"):
         with self.lock:
             self.active += 1
             self.max_active = max(self.max_active, self.active)
@@ -46,11 +46,11 @@ def test_four_employees_run_in_parallel_then_chief_and_share_analysis_id():
 
 def test_failed_employee_is_unavailable_but_chief_still_runs():
     class PartlyFailedRouter(FakeRouter):
-        def call(self, role, messages, schema, analysis_id):
+        def call(self, role, messages, schema, analysis_id, analysis_mode="standard"):
             if role == "sentiment_analyst":
                 self.calls.append(role)
                 return RouterResult(role, None, None, False, None, 0.0, error="all providers failed")
-            return super().call(role, messages, schema, analysis_id)
+            return super().call(role, messages, schema, analysis_id, analysis_mode)
 
     router = PartlyFailedRouter()
     result = StockResearchAgent(router).analyze("600000.SH", {"lastPrice": 10})

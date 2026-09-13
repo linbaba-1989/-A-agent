@@ -4,7 +4,7 @@
 
 ## 当前状态（V1.0 开发中）
 
-- **多模型统一调用**：OpenAI / ChatGPT、DeepSeek、通义千问、Kimi、豆包
+- **多模型统一调用**：DeepSeek、通义千问、Kimi、豆包；OpenAI Provider 保留但默认暂停
 - **真实行情入口**：仅限本机 QMT（迅投 xtquant），断开时停止分析
 - **全 A 筛选**：批量快照、分钟/日 K、涨速、均线、突破、VWAP、量比和透明评分
 - **行情诊断**：报告股票池、`get_full_tick` 返回数、有效行情数和耗时
@@ -36,6 +36,10 @@ streamlit run app.py
 先按 [项目隔离 xtquant 安装说明](tools/xtquant_runtime/230825b/README.md)安装官方 `230825b` 运行时。项目不会上传或替换 QMT 安装目录中的 DLL、pyd 或 Python 文件。`QMT_PATH` 仅用于诊断页面定位和比较券商随附组件，生产行情固定从项目隔离目录加载；端口必须与本机 QMT 行情服务一致。模型 Key 仅在运行单股 AI 研究时需要。
 
 AI 岗位路由可直接编辑 `config/agent_config.json`，无需修改 Python。启动和打开“AI员工”页只检查 Key 与配置，不调用任何模型；只有单股深度分析或用户点击“一键体检”时才发送请求。成本单价通过 `.env` 中各供应商的 `*_INPUT_COST_PER_MILLION` 和 `*_OUTPUT_COST_PER_MILLION` 配置，未配置时记录为 0，避免展示未经确认的价格。
+
+默认岗位分工为：技术分析员与总研究员使用 DeepSeek V4-Pro，基本面/事件分析员使用 Qwen 3.8 Max，市场情绪分析员使用 `.env` 中 `DOUBAO_MODEL` 指向的豆包 Endpoint，风控官使用 Kimi K3。Qwen 3.8 Max 无权限时先切换 Qwen 3.7 Plus，各岗位随后按 `config/agent_config.json` 的候选顺序继续降级。OpenAI 通过 `OPENAI_ENABLED=false` 默认停用，充值并完成 API 验收后可重新启用。
+
+“AI员工”页的 MAX 深度研究模式只把技术分析员和总研究员的 DeepSeek 推理等级从 `high` 切换为 `max`。研究模式、实际模型、推理等级和 fallback 原因会随用量记录写入审计字段。Kimi K3 不继承 K2.6 的固定 temperature 规则；豆包升级 Endpoint 只需修改 `DOUBAO_MODEL`，必要时同时修改 `DOUBAO_BASE_URL`。
 
 启动 QMT 并登录行情后，可以先执行只读诊断：
 
