@@ -163,7 +163,11 @@ def _usage(result: dict[str, Any]) -> dict[str, Any]:
             "error", "requested_model", "actual_model", "fallback_reason",
         )} for row in rows],
         "total_tokens": sum((row.get("total_tokens") or 0) for row in rows),
-        "total_estimated_cost": sum(row.get("estimated_cost", 0.0) for row in rows),
+        "total_estimated_cost": (sum(row["estimated_cost"] for row in rows
+                                     if row.get("estimated_cost") is not None)
+                                 if rows and all(row.get("estimated_cost") is not None for row in rows) else None),
+        "cost_status": ("estimated" if rows and all(row.get("estimated_cost") is not None for row in rows)
+                        else "unknown"),
     }
 
 

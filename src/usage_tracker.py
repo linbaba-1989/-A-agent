@@ -21,7 +21,7 @@ class UsageRecord:
     output_tokens: int | None
     total_tokens: int | None
     latency: float
-    estimated_cost: float
+    estimated_cost: float | None
     timestamp: str
     success: bool
     fallback: bool = False
@@ -36,6 +36,7 @@ class UsageRecord:
     connect_latency: float | None = None
     first_token_latency: float | None = None
     timeout_stage: str | None = None
+    cost_status: str = "unknown"
 
 
 class UsageTracker:
@@ -58,8 +59,13 @@ class UsageTracker:
         totals: dict[str, dict[str, float]] = {}
         for row in self.records():
             key = row["role"]
-            item = totals.setdefault(key, {"calls": 0, "total_tokens": 0, "estimated_cost": 0.0})
+            item = totals.setdefault(key, {"calls": 0, "total_tokens": 0, "estimated_cost": 0.0,
+                                           "cost_status": "estimated"})
             item["calls"] += 1
             item["total_tokens"] += row["total_tokens"] or 0
-            item["estimated_cost"] += row["estimated_cost"]
+            if row.get("estimated_cost") is None:
+                item["estimated_cost"] = None
+                item["cost_status"] = "unknown"
+            elif item["estimated_cost"] is not None:
+                item["estimated_cost"] += row["estimated_cost"]
         return totals

@@ -6,10 +6,10 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable, Type
 
-from openai import OpenAI
 from pydantic import BaseModel, ValidationError
 
 from .model_registry import ModelRegistry, ProviderConfig
+from .provider_adapters import ADAPTERS, OpenAICompatibleAdapter
 from .analysis_profiles import get_profile
 from .usage_tracker import UsageRecord, UsageTracker, timestamp_now
 
@@ -25,7 +25,8 @@ class RouterResult:
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
-    estimated_cost: float = 0.0
+    estimated_cost: float | None = None
+    cost_status: str = "unknown"
     fallback: bool = False
     error: str | None = None
     analysis_id: str | None = None
@@ -75,8 +76,7 @@ class LLMRouter:
         self.role_config = role_config or load_role_config()
         self.tracker = tracker or UsageTracker()
         self.client_factory = client_factory or (
-            lambda provider: OpenAI(api_key=provider.api_key, base_url=provider.base_url,
-                                    timeout=provider.timeout, max_retries=0)
+            lambda provider: ADAPTERS.get(provider.provider_name, OpenAICompatibleAdapter)(provider)
         )
         self.last_results: dict[str, RouterResult] = {}
         self.role_states: dict[str, str] = {role: "idle" for role in self.role_config}
@@ -103,10 +103,12 @@ class LLMRouter:
         return input_tokens, output_tokens, total_tokens
 
     @staticmethod
-    def _cost(provider: ProviderConfig, input_tokens: int, output_tokens: int) -> float:
-        rates = provider.cost_profile or {}
-        return (input_tokens * rates.get("input_per_million", 0.0) +
-                output_tokens * rates.get("output_per_million", 0.0)) / 1_000_000
+    def _cost(provider: ProviderConfig, input_tokens: int, output_tokens: int) -> tuple[float | None, str]:
+        rates = provider.cost_profile
+        if not rates or "input_per_million" not in rates or "output_per_million" not in rates:
+            return None, "unknown"
+        return ((input_tokens * rates["input_per_million"] +
+                 output_tokens * rates["output_per_million"]) / 1_000_000, "estimated")
 
     def _candidates(self, role: str) -> list[dict[str, Any]]:
         route = self.role_config[role]
@@ -146,6 +148,8 @@ class LLMRouter:
             kwargs["reasoning_effort"] = reasoning_effort
             if provider.reasoning_mode == "deepseek":
                 kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
+        if hasattr(client, "chat_completion"):
+            return client.chat_completion(**kwargs)
         return client.chat.completions.create(**kwargs)
 
     def _attempt(self, role: str, provider: ProviderConfig, messages: list[dict[str, str]],
@@ -188,16 +192,16 @@ class LLMRouter:
                                      usage=(input_tokens, output_tokens, total_tokens),
                                      latency=perf_counter() - started, repair_count=1) from exc
         latency = perf_counter() - started
-        cost = self._cost(provider, input_tokens, output_tokens)
+        cost, cost_status = self._cost(provider, input_tokens, output_tokens)
         result = RouterResult(role, provider.provider_name, provider.model_name, True, parsed.model_dump(), latency,
-                              input_tokens, output_tokens, total_tokens, cost, fallback, analysis_id=analysis_id,
+                              input_tokens, output_tokens, total_tokens, cost, cost_status, fallback, analysis_id=analysis_id,
                               analysis_mode=analysis_mode, reasoning_effort=reasoning_effort,
                               requested_model=requested_model, actual_model=provider.model_name,
                               fallback_reason=fallback_reason, usage_status="available",
                               schema_repair_count=repair_count)
         self.tracker.record(UsageRecord(analysis_id, provider.provider_name, provider.model_name, role,
                                         input_tokens, output_tokens, total_tokens, latency, cost,
-                                        timestamp_now(), True, fallback, analysis_mode=analysis_mode,
+                                        timestamp_now(), True, fallback, analysis_mode=analysis_mode, cost_status=cost_status,
                                         reasoning_effort=reasoning_effort, requested_model=requested_model,
                                         actual_model=provider.model_name, fallback_reason=fallback_reason,
                                         usage_status="available", schema_repair_count=repair_count))
@@ -240,23 +244,25 @@ class LLMRouter:
                         "response" if isinstance(exc, TimeoutError) else None)
                     usage_status = "available" if failure_usage is not None else "unavailable"
                     tokens = failure_usage or (None, None, None)
+                    failure_cost, failure_cost_status = (self._cost(provider, *(tokens[:2])) if failure_usage
+                                                        else (None, "unknown"))
                     self.tracker.record(UsageRecord(analysis_id, provider.provider_name, provider.model_name, role,
-                                                    *tokens, failure_latency, self._cost(provider, *(tokens[:2])) if failure_usage else 0.0,
+                                                    *tokens, failure_latency, failure_cost,
                                                     timestamp_now(), False,
                                                     fallback, error, analysis_mode=analysis_mode,
                                                     reasoning_effort=reasoning_effort, requested_model=requested_model,
                                                     actual_model=provider.model_name, fallback_reason=fallback_reason,
                                                     usage_status=usage_status, schema_repair_count=repair_count,
-                                                    timeout_stage=timeout_stage))
+                                                    timeout_stage=timeout_stage, cost_status=failure_cost_status))
         result = RouterResult(role, None, None, False, None, 0.0, error="; ".join(errors), analysis_id=analysis_id,
                               analysis_mode=analysis_mode, requested_model=requested_model,
                               fallback_reason="; ".join(errors), usage_status="unavailable")
         self.last_results[role] = result
         self.role_states[role] = "error"
-        self.tracker.record(UsageRecord(analysis_id, "unavailable", "unavailable", role, None, None, None, 0.0, 0.0,
+        self.tracker.record(UsageRecord(analysis_id, "unavailable", "unavailable", role, None, None, None, 0.0, None,
                                         timestamp_now(), False, error=result.error, analysis_mode=analysis_mode,
                                         requested_model=requested_model, fallback_reason=result.fallback_reason,
-                                        usage_status="unavailable"))
+                                        usage_status="unavailable", cost_status="unknown"))
         return result
 
     def healthcheck(self, provider_name: str, model_name: str | None = None,

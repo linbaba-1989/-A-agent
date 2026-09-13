@@ -2,14 +2,32 @@ from src.model_registry import ModelRegistry, ProviderConfig
 from src.llm_router import load_role_config
 
 
-def test_registry_contains_five_providers_and_does_not_call_api(monkeypatch):
-    for name in ("OPENAI", "DEEPSEEK", "QWEN", "KIMI", "DOUBAO"):
+def test_registry_contains_production_and_candidate_providers_without_api_calls(monkeypatch):
+    for name in ("OPENAI", "DEEPSEEK", "QWEN", "KIMI", "DOUBAO", "GLM", "HUNYUAN", "MINIMAX", "STEPFUN"):
         monkeypatch.delenv(f"{name}_API_KEY", raising=False)
+        monkeypatch.delenv(f"{name}_ENABLED", raising=False)
     registry = ModelRegistry()
-    assert set(registry.providers) == {"openai", "deepseek", "qwen", "kimi", "doubao"}
+    assert set(registry.providers) == {"openai", "deepseek", "qwen", "kimi", "doubao",
+                                      "glm", "hunyuan", "minimax", "stepfun"}
     assert registry.validate() == []
     assert all(not row["configured"] for row in registry.statuses())
     assert all("api_key" not in row for row in registry.statuses())
+    assert all(not registry.get(name).production_enabled for name in ("glm", "hunyuan", "minimax", "stepfun"))
+
+
+def test_candidate_models_are_config_driven_and_unknown_capabilities_stay_unknown(monkeypatch):
+    monkeypatch.setenv("GLM_MODEL", "local-candidate-id")
+    registry = ModelRegistry()
+    glm = registry.get("glm")
+    assert glm.model_name == "local-candidate-id"
+    assert glm.supports_tools is None and glm.supports_streaming is None and glm.context_window is None
+    assert glm.pricing_status == "unknown"
+
+
+def test_zero_placeholder_prices_remain_unknown(monkeypatch):
+    monkeypatch.setenv("GLM_INPUT_COST_PER_MILLION", "0")
+    monkeypatch.setenv("GLM_OUTPUT_COST_PER_MILLION", "0")
+    assert ModelRegistry().get("glm").cost_profile is None
 
 
 def test_registry_reports_invalid_config():
@@ -20,6 +38,7 @@ def test_registry_reports_invalid_config():
 def test_runtime_environment_is_read_when_registry_is_created(monkeypatch):
     monkeypatch.setenv("DOUBAO_MODEL", "deployment-from-env")
     monkeypatch.setenv("OPENAI_INPUT_COST_PER_MILLION", "1.25")
+    monkeypatch.setenv("OPENAI_OUTPUT_COST_PER_MILLION", "2.50")
     registry = ModelRegistry()
     assert registry.get("doubao").model_name == "deployment-from-env"
     assert registry.get("openai").cost_profile["input_per_million"] == 1.25

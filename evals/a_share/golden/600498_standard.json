@@ -1,0 +1,25 @@
+{
+  "symbol": "600498.SH",
+  "name": "烽火通信",
+  "analysis_mode": "standard",
+  "fact_bundle_version": "p14-real-20260914",
+  "fact_bundle_hash": "674ea25673969caf7abd13d549208fb61bd310bcecd43ad6b3313d659f21ad4c",
+  "facts": {
+    "last_price": 40.75,
+    "change_pct": 1.545,
+    "ma5": 40.23,
+    "ma10": 40.163,
+    "ma20": 40.205,
+    "ma60": 46.793,
+    "atr_pct": 6.01,
+    "high_20d": 43.75,
+    "low_20d": 37.01,
+    "range_position_20d": 55.49,
+    "turnover_rate": 8.152051265797452,
+    "volume_ratio": 1.3034,
+    "breakout_status": "未确认突破",
+    "market_phase": "unavailable",
+    "fundamental_data": "unavailable",
+    "event_data": "unavailable"
+  }
+}

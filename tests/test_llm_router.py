@@ -52,6 +52,19 @@ def test_primary_success_role_route_and_token_record(monkeypatch, tmp_path):
     assert router.tracker.records()[0]["role"] == "role"
 
 
+def test_unconfigured_pricing_returns_unknown_cost(monkeypatch, tmp_path):
+    monkeypatch.setenv("PRIMARY_KEY", "configured")
+    provider = ProviderConfig("primary", "p-model", None, "PRIMARY_KEY", cost_profile=None)
+    def factory(_provider):
+        return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: response())))
+    router = LLMRouter(ModelRegistry({"primary": provider}),
+                       {"role": {"candidates": [{"provider": "primary"}]}},
+                       UsageTracker(tmp_path / "usage.jsonl"), factory)
+    result = router.call("role", [], Output, "unknown-cost")
+    assert result.estimated_cost is None and result.cost_status == "unknown"
+    assert router.tracker.records()[0]["estimated_cost"] is None
+
+
 def test_primary_failure_uses_fallback(monkeypatch, tmp_path):
     router, calls = make_router(monkeypatch, tmp_path,
                                 {"primary": [TimeoutError("timeout")], "fallback": [response()]})

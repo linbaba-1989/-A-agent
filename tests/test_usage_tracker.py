@@ -9,7 +9,16 @@ def test_usage_jsonl_and_summary_exclude_secrets(tmp_path):
     row = tracker.records()[0]
     assert row["total_tokens"] == 15
     assert "api_key" not in row
-    assert tracker.summary()["risk_officer"] == {"calls": 1, "total_tokens": 15, "estimated_cost": 0.01}
+    assert tracker.summary()["risk_officer"] == {"calls": 1, "total_tokens": 15,
+                                                  "estimated_cost": 0.01, "cost_status": "estimated"}
+
+
+def test_unknown_cost_remains_null(tmp_path):
+    tracker = UsageTracker(tmp_path / "usage.jsonl")
+    tracker.record(UsageRecord("A", "glm", "candidate", "risk_officer", 10, 5, 15, 0.2, None,
+                               "2026-09-13T10:00:00+08:00", True, cost_status="unknown"))
+    assert tracker.records()[0]["estimated_cost"] is None
+    assert tracker.summary()["risk_officer"]["cost_status"] == "unknown"
 
 
 def test_usage_records_analysis_mode_and_reasoning_effort(tmp_path):

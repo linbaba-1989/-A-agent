@@ -19,9 +19,17 @@ def render(ctx: dict) -> None:
         st.write(f"QMT fallback：{status['qmt_fallback']}")
         st.write(f"Token：configured={bool(os.getenv('XTDC_TOKEN', '').strip())}")
     with models:
-        rows = [{"Provider": item["provider_name"], "模型": item["model_name"],
-                 "配置": "已配置" if item["configured"] else "未配置",
-                 "健康状态": "待体检", "最后测试延迟": "--"} for item in ctx["registry"].statuses()]
+        production_roles = {}
+        for role, route in ctx["routes"].items():
+            provider = route["candidates"][0]["provider"]
+            production_roles.setdefault(provider, []).append(ROLE_NAMES[role])
+        rows = []
+        for item in ctx["registry"].statuses():
+            roles = " / ".join(production_roles.get(item["provider_name"], []))
+            state = "● Ready" if item["configured"] else "○ Not configured"
+            rows.append({"Provider": item["provider_name"], "模型": item["model_name"] or "未指定",
+                         "状态": state, "用途": f"Production: {roles}" if roles else "Candidate",
+                         "成本": item["pricing_status"]})
         st.dataframe(rows, hide_index=True, width="stretch")
     with employees:
         rows = []
