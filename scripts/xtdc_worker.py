@@ -8,6 +8,14 @@ import sys
 from typing import Any
 
 
+def _configure_json_streams() -> None:
+    """Keep the private JSON-lines protocol independent of the Windows code page."""
+    for stream in (sys.stdin, sys.stdout):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            reconfigure(encoding="utf-8", errors="strict")
+
+
 def _plain(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _plain(item) for key, item in value.items()}
@@ -109,4 +117,5 @@ def main(runtime_root: str) -> None:
 
 
 if __name__ == "__main__":
+    _configure_json_streams()
     main(sys.argv[1])
