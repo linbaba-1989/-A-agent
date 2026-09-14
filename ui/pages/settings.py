@@ -12,12 +12,12 @@ def render(ctx: dict) -> None:
     with market:
         status = ctx["status"]
         cols = st.columns(4)
-        cols[0].metric("当前 Provider", status["provider"])
-        cols[1].metric("Raw Universe", status["raw_universe"])
-        cols[2].metric("Active Universe", status["active_universe"])
-        cols[3].metric("Valid Quotes", status["valid_quotes"])
-        st.write(f"QMT fallback：{status['qmt_fallback']}")
-        st.write(f"Token：configured={bool(os.getenv('XTDC_TOKEN', '').strip())}")
+        cols[0].metric("当前行情源", status["provider"])
+        cols[1].metric("原始股票池", status["raw_universe"])
+        cols[2].metric("可扫描股票池", status["active_universe"])
+        cols[3].metric("有效行情", status["valid_quotes"])
+        st.write(f"QMT 备用：{'可用' if status['qmt_fallback'].endswith('available') and 'unavailable' not in status['qmt_fallback'] else '不可用'}")
+        st.write(f"Token：{'已配置' if bool(os.getenv('XTDC_TOKEN', '').strip()) else '未配置'}")
     with models:
         production_roles = {}
         for role, route in ctx["routes"].items():
@@ -26,16 +26,16 @@ def render(ctx: dict) -> None:
         rows = []
         for item in ctx["registry"].statuses():
             roles = " / ".join(production_roles.get(item["provider_name"], []))
-            state = "● Ready" if item["configured"] else "○ Not configured"
-            rows.append({"Provider": item["provider_name"], "模型": item["model_name"] or "未指定",
-                         "状态": state, "用途": f"Production: {roles}" if roles else "Candidate",
+            state = "● 就绪" if item["configured"] else "○ 未配置"
+            rows.append({"服务商": item["provider_name"], "模型": item["model_name"] or "未指定",
+                         "状态": state, "用途": f"生产模型：{roles}" if roles else "候选模型",
                          "成本": item["pricing_status"]})
         st.dataframe(rows, hide_index=True, width="stretch")
     with employees:
         rows = []
         for role, route in ctx["routes"].items():
             candidate = route["candidates"][0]
-            rows.append({"AI员工": ROLE_NAMES[role], "Provider": candidate["provider"],
+            rows.append({"AI员工": ROLE_NAMES[role], "服务商": candidate["provider"],
                          "模型": candidate.get("model") or "当前 Endpoint"})
         st.dataframe(rows, hide_index=True, width="stretch")
     with system:

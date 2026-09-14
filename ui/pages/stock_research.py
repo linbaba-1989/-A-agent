@@ -10,7 +10,8 @@ from ui.components.kline_chart import render_kline
 from ui.components.stock_header import render_stock_header
 from ui.components.technical_panel import render_technical_panel
 from ui.stock_research_service import StockResearchService, toggle_watchlist
-from ui.view_models import FUNDAMENTAL_GAP_MESSAGE, normalize_symbol, safe_error
+from ui.view_models import (ANALYSIS_MODE_LABELS, FUNDAMENTAL_GAP_MESSAGE, analysis_mode_display,
+                            analysis_mode_value, normalize_symbol, safe_error)
 from src.realtime_market import SnapshotConsumerState, live_state, refresh_interval_seconds
 
 
@@ -74,7 +75,7 @@ def _render_records(symbol: str) -> None:
         chief = result.get("chief_researcher", {})
         data = chief.get("data") or {}
         bull, bear = len(data.get("bull_case", [])), len(data.get("bear_case", []))
-        rows.append({"时间": result.get("created_at", "--"), "模式": result.get("analysis_mode", "--"),
+        rows.append({"时间": result.get("created_at", "--"), "模式": analysis_mode_display(result.get("analysis_mode")),
                      "观点": "偏多" if bull > bear else "偏空" if bear > bull else "中性",
                      "置信度": data.get("confidence", "--"),
                      "耗时": f"{result.get('elapsed_seconds', 0):.2f}s" if result.get("elapsed_seconds") else "--",
@@ -136,9 +137,9 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
 
     st.subheader("AI研究")
     selected_mode = st.segmented_control("AI研究模式", ["标准", "深度", "MAX"],
-                                         default={"standard": "标准", "deep": "深度", "max": "MAX"}.get(mode, "标准"),
+                                         default=analysis_mode_display(mode) if mode in ANALYSIS_MODE_LABELS else "标准",
                                          label_visibility="collapsed") or "标准"
-    ai_mode = {"标准": "standard", "深度": "deep", "MAX": "max"}[selected_mode]
+    ai_mode = analysis_mode_value(selected_mode)
     render_ai_states({role: "idle" for role in ctx["routes"]})
     st.caption(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确记录数据缺口。")
     if st.button("开始AI研究", type="primary"):

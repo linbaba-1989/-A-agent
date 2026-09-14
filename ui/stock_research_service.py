@@ -104,9 +104,12 @@ class StockResearchService:
         detail = self.provider.normalized_instrument(symbol)
         timestamp = self.provider.tick_timestamp(tick)
         as_of = datetime.fromtimestamp(timestamp) if timestamp else None
-        raw_history = self.provider.get_history([symbol], "1d", history_count).get(symbol)
+        history_service = getattr(self.scanner, "history_service", None)
+        raw_history = (history_service.ensure(symbol, history_count) if history_service is not None
+                       else self.provider.get_history([symbol], "1d", history_count).get(symbol))
         history = prepare_history(raw_history)
-        indicators = history_indicators(raw_history, as_of)
+        indicators = (history_service.indicators(symbol, as_of) if history_service is not None
+                      else history_indicators(raw_history, as_of))
         closes = indicators.get("closes", [])
         last = tick.get("lastPrice", UNAVAILABLE)
         turnover = validated_turnover(tick, detail)

@@ -96,6 +96,12 @@ def test_qmt_yyyymmdd_index_wins_over_utc_millisecond_date():
     assert complete["close"].tolist() == [10]
 
 
+def test_history_after_stale_quote_date_is_not_used():
+    frame = pd.DataFrame({"close": [10, 11, 99]}, index=[20260910, 20260911, 20260914])
+    complete = complete_daily_frame(frame, datetime(2026, 9, 11, 15, 0))
+    assert complete["close"].tolist() == [10]
+
+
 def test_instrument_and_trading_state():
     instrument = normalize_instrument("600000.SH", {"InstrumentName": "浦发银行", "IsTrading": False})
     tick = {"lastPrice": 10, "lastClose": 9, "stockStatus": 5}

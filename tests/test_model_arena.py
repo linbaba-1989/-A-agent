@@ -53,7 +53,7 @@ def test_timeout_reliability_and_single_sample_has_no_fake_p95():
 def test_unknown_cost_is_not_zero_and_ui_displays_unknown():
     row = base_score("m").public_dict()
     assert row["estimated_cost"] is None and row["cost_status"] == "unknown"
-    assert arena_table([row], "technical_analyst")[0]["成本"] == "unknown"
+    assert arena_table([row], "technical_analyst")[0]["成本"] == "未知"
 
 
 def test_candidate_adapters_share_interface_without_calling_api(monkeypatch):

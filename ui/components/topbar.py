@@ -1,6 +1,6 @@
 import streamlit as st
 
-from ui.view_models import normalize_symbol
+from ui.view_models import ANALYSIS_MODE_LABELS, analysis_mode_value, normalize_symbol
 
 
 def render_topbar(status: dict) -> tuple[str, str]:
@@ -8,7 +8,7 @@ def render_topbar(status: dict) -> tuple[str, str]:
     brand.markdown("**A-Agent** <span style='color:#667085;font-size:11px'>Quant Terminal</span>", unsafe_allow_html=True)
     query = search.text_input("全局股票搜索", st.session_state.get("selected_symbol", "600498.SH"),
                               label_visibility="collapsed", placeholder="代码 / 名称（当前支持代码）")
-    analysis_mode = mode.segmented_control("研究模式", ["标准", "深度", "MAX"], default="标准",
+    analysis_mode = mode.segmented_control("研究模式", list(ANALYSIS_MODE_LABELS.values()), default="标准",
                                            label_visibility="collapsed") or "标准"
     market_open = status.get("market") == "交易中"
     if "realtime_enabled" not in st.session_state:
@@ -21,4 +21,4 @@ def render_topbar(status: dict) -> tuple[str, str]:
     symbol = normalize_symbol(query)
     if symbol:
         st.session_state.selected_symbol = symbol
-    return symbol, {"标准": "standard", "深度": "deep", "MAX": "max"}[analysis_mode]
+    return symbol, analysis_mode_value(analysis_mode)

@@ -1,6 +1,7 @@
 import streamlit as st
 
 from ui.components.ai_report import render_ai_report
+from ui.view_models import analysis_mode_display
 
 ARENA_ROLES = {"技术": "technical_analyst", "基本面": "fundamental_event_analyst",
                "情绪": "sentiment_analyst", "风险": "risk_officer", "总研究员": "chief_researcher"}
@@ -16,7 +17,7 @@ def arena_table(rows: list[dict], role: str) -> list[dict]:
              "Schema": "PASS" if row.get("schema_pass") else "FAIL",
              "延迟": row.get("latency") if row.get("latency") is not None else "--",
              "Token": row.get("total_tokens") if row.get("total_tokens") is not None else "--",
-             "成本": row.get("estimated_cost") if row.get("cost_status") != "unknown" else "unknown",
+             "成本": row.get("estimated_cost") if row.get("cost_status") != "unknown" else "未知",
              "状态": row.get("status", "--")} for row in selected]
 
 
@@ -33,7 +34,7 @@ def render(ctx: dict) -> None:
             for index, row in enumerate(records):
                 chief = row.get("chief_researcher", {})
                 confidence = (chief.get("data") or {}).get("confidence", "--")
-                options.append(f"{row.get('symbol')}｜{row.get('analysis_mode')}｜置信度 {confidence}｜{'完成' if chief.get('success') else '失败'}")
+                options.append(f"{row.get('symbol')}｜{analysis_mode_display(row.get('analysis_mode'))}｜置信度 {confidence}｜{'完成' if chief.get('success') else '失败'}")
             selected = st.selectbox("研究记录", range(len(options)), format_func=lambda index: options[index])
             render_ai_report(records[selected])
     with arena_tab:
@@ -42,7 +43,7 @@ def render(ctx: dict) -> None:
         rows = st.session_state.get("model_arena_results", [])
         table = arena_table(rows, ARENA_ROLES[label or "技术"])
         if not table:
-            st.info("尚未运行真实Arena")
+            st.info("尚未运行真实模型竞技场")
         else:
             st.dataframe(table, hide_index=True, width="stretch")
-            st.caption("排名第一仅作为 Recommended Candidate；切换生产模型需要人工确认。")
+            st.caption("排名第一仅作为推荐候选；切换生产模型需要人工确认。")

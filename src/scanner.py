@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 
 from .indicators import UNAVAILABLE, intraday_position, percent_change
+from .history_service import HistoricalDataService
 from .market_cache import (SnapshotHistory, daily_suspend_flag, history_indicators, infer_volume_unit,
                            normalize_instrument, realtime_ma, security_status, validated_turnover)
 from .models import MarketDiagnostics, ScanResult
@@ -39,12 +40,13 @@ def calculate_score(row: dict[str, Any]) -> dict[str, float]:
 
 
 class MarketScanner:
-    def __init__(self, provider: QMTProvider):
+    def __init__(self, provider: QMTProvider, history_service: HistoricalDataService | None = None):
         self.provider = provider
         self.universe: list[str] = []
         self.instrument_cache: dict[str, dict[str, Any]] = {}
-        self.history_indicator_cache: dict[str, dict[str, Any]] = {}
-        self.history_frame_cache: dict[str, pd.DataFrame] = {}
+        self.history_service = history_service or HistoricalDataService(provider)
+        self.history_indicator_cache = self.history_service._indicator_cache
+        self.history_frame_cache = self.history_service.frames
         self.suspend_flag_cache: dict[str, Any] = {}
         self.suspend_cache_date = None
         self.snapshot_history = SnapshotHistory(600)
@@ -73,7 +75,9 @@ class MarketScanner:
                 self.instrument_cache[code] = normalize_instrument(code, {"InstrumentStatus": f"DETAIL_ERROR: {exc!r}"})
             if progress_callback and (index % 100 == 0 or index == total):
                 progress_callback(index / total * 0.65, f"正在读取合约信息 {index}/{total}")
-        self.history_frame_cache = self.provider.get_local_history(self.universe, 65)
+        history_progress = (lambda value, message: progress_callback(.65 + .35 * value, message)) if progress_callback else None
+        self.history_service.initialize(self.universe, 65, history_progress)
+        self.history_frame_cache = self.history_service.frames
         if progress_callback:
             progress_callback(1.0, "历史日K读取完成")
         self.history_init_seconds = perf_counter() - started
@@ -178,9 +182,7 @@ class MarketScanner:
                 continue
             assert tick is not None
             self.snapshot_history.update(symbol, timestamp, tick)
-            if symbol not in self.history_indicator_cache:
-                self.history_indicator_cache[symbol] = history_indicators(self.history_frame_cache.get(symbol, pd.DataFrame()), as_of)
-            history = self.history_indicator_cache[symbol]
+            history = self.history_service.indicators(symbol, as_of)
             last = tick.get("lastPrice")
             closes = history.get("closes", [])
             turnover = validated_turnover(tick, instrument)
@@ -204,6 +206,7 @@ class MarketScanner:
                 "high_5d": history.get("high_5d", UNAVAILABLE), "high_10d": history.get("high_10d", UNAVAILABLE),
                 "high_20d": history.get("high_20d", UNAVAILABLE), "atr14": history.get("atr14", UNAVAILABLE),
                 "volume_ratio": self._volume_ratio(tick, history), "security_status": state,
+                "history_status": self.history_service.reason(symbol),
                 "suspendFlag": suspend_flag, "stockStatus": tick.get("stockStatus"), "openInt": tick.get("openInt"),
                 "instrument_status": instrument.get("instrument_status"), "is_trading": instrument.get("is_trading"),
                 "source": "QMT/xtquant",

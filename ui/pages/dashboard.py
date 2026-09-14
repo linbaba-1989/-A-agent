@@ -1,7 +1,7 @@
 import html
 import streamlit as st
 
-from ui.view_models import cn_change_color, display_value, format_amount, format_number
+from ui.view_models import analysis_mode_display, cn_change_color, display_value, format_amount, format_number
 
 
 def _table(rows):
@@ -53,12 +53,12 @@ def _ai_panel(ctx):
     for role, label in names:
         state = ctx["workforce"].router.role_states.get(role, "idle")
         ready = state not in ("working", "error")
-        css, text = ("dot-ok", "Ready") if ready else ("dot-warn", state)
+        css, text = ("dot-ok", "就绪") if ready else ("dot-warn", "运行中" if state == "working" else "异常")
         parts.append(f"<div class='ai-line'><span>{label}</span><b class='{css}'>● {text}</b></div>")
     records = st.session_state.get("research_history", [])
     parts.append("<div style='padding-top:7px;font-size:12px;color:#667085'>最近研究</div>")
     parts.append("<div style='font-size:12px;padding-top:4px'>暂无研究记录</div>" if not records else
-                 f"<div style='font-size:12px;padding-top:4px'>{html.escape(records[0].get('symbol','--'))}　{records[0].get('analysis_mode','--')}</div>")
+                 f"<div style='font-size:12px;padding-top:4px'>{html.escape(records[0].get('symbol','--'))}　{analysis_mode_display(records[0].get('analysis_mode'))}</div>")
     st.markdown("".join(parts), unsafe_allow_html=True)
 
 

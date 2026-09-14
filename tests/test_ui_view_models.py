@@ -4,7 +4,7 @@ from pathlib import Path
 from ui.view_models import (cn_change_color, display_value, filter_scan_rows, market_label,
                             format_amount, format_number, format_security_status, public_market_status,
                             normalize_stock_name, RANGE_PLACEHOLDERS, raw_json_expanded_default,
-                            role_state, safe_error)
+                            role_state, safe_error, analysis_mode_display, analysis_mode_value)
 
 
 def test_a_share_change_colors_are_red_up_green_down():
@@ -15,7 +15,7 @@ def test_a_share_change_colors_are_red_up_green_down():
 
 def test_market_closed_and_unavailable_are_not_invented():
     assert market_label("closed") == "已收盘"
-    assert market_label(None) == "unavailable"
+    assert market_label(None) == "--"
     assert display_value("unavailable") == "--"
 
 
@@ -83,3 +83,17 @@ def test_range_controls_use_chinese_minimum_and_maximum_labels():
     assert 'placeholder="min"' not in scanner_source
     assert 'placeholder="max"' not in scanner_source
     assert "马克斯" not in scanner_source
+
+
+def test_analysis_mode_has_one_chinese_display_mapping():
+    assert [analysis_mode_display(value) for value in ("standard", "deep", "max")] == ["标准", "深度", "MAX"]
+    assert [analysis_mode_value(value) for value in ("标准", "深度", "MAX")] == ["standard", "deep", "max"]
+    assert "马克斯" not in "".join(analysis_mode_display(value) for value in ("standard", "deep", "max"))
+    ui_root = Path(__file__).parents[1] / "ui"
+    assert "马克斯" not in "".join(path.read_text(encoding="utf-8") for path in ui_root.rglob("*.py"))
+
+
+def test_global_theme_declares_chinese_font_stack():
+    source = (Path(__file__).parents[1] / "ui" / "theme.py").read_text(encoding="utf-8")
+    for font in ("Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC"):
+        assert font in source

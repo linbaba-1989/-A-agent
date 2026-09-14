@@ -4,6 +4,12 @@ import streamlit as st
 CSS = """
 <style>
 :root { --cn-red:#d92d20; --cn-green:#079455; --ink:#17202e; --muted:#667085; --line:#e4e7ec; }
+html,body,.stApp,.stApp *,button,input,select,textarea,table,[role="tab"] {
+  font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Segoe UI",Arial,sans-serif !important;
+}
+.terminal-table td,[data-testid="stMetricValue"],[data-testid="stNumberInput"] input {
+  font-variant-numeric:tabular-nums;
+}
 .stApp { background:#f5f6f8; color:var(--ink); }
 .block-container { padding:2.8rem .8rem 2.5rem; max-width:none; }
 h1,h2,h3 { letter-spacing:-.02em; color:var(--ink); }

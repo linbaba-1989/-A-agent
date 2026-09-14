@@ -53,7 +53,7 @@ def _events(previous: dict[str, dict], rows: list[dict]) -> list[str]:
 
 def render(ctx: dict) -> None:
     st.title("实时行情")
-    st.caption("Snapshot polling · 全A默认2秒 · 所有变化来自当前行情 Provider")
+    st.caption("行情快照轮询 · 全A默认2秒 · 所有变化来自当前行情源")
     choice = st.segmented_control("排行榜", list(RANKINGS), default="涨幅榜", label_visibility="collapsed") or "涨幅榜"
     top_n = st.segmented_control("显示数量", [20, 50], default=20, format_func=lambda value: f"Top {value}",
                                  label_visibility="collapsed") or 20
@@ -96,8 +96,8 @@ def render(ctx: dict) -> None:
                 for event in events: st.caption(event)
             else: st.caption("暂无基于当前快照的事实异动")
         ui_latency = perf_counter() - render_started - feed.snapshot_latency
-        st.caption(f"snapshot {feed.snapshot_latency:.3f}s｜UI {max(0, ui_latency):.3f}s｜"
-                   f"total {perf_counter()-render_started:.3f}s｜Provider初始化 {feed.provider_initializations}次｜"
+        st.caption(f"行情快照 {feed.snapshot_latency:.3f}s｜界面 {max(0, ui_latency):.3f}s｜"
+                   f"合计 {perf_counter()-render_started:.3f}s｜行情源初始化 {feed.provider_initializations}次｜"
                    f"请求 {feed.provider_request_count}｜锁跳过 {feed.skipped_due_to_lock}")
 
     live_fragment()

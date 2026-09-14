@@ -1,7 +1,7 @@
 import streamlit as st
 
 from ui.components.stock_table import render_stock_table
-from ui.view_models import RANGE_PLACEHOLDERS, filter_scan_rows
+from ui.view_models import RANGE_PLACEHOLDERS, filter_scan_rows, history_status_display
 from ui.stock_research_service import select_research_symbol
 
 
@@ -68,8 +68,16 @@ def render(ctx: dict) -> None:
                "speed_1m": speed[1], "speed_3m": speed[3], "speed_5m": speed[5],
                "recent_high": recent_high, "ma_breakout": ma_breakout,
                **{f"above_ma{window}": enabled for window, enabled in above.items()}}
+    history = ctx["scanner"].history_service.info()
+    technical_filter_requested = recent_high or ma_breakout or any(above.values())
+    if technical_filter_requested and history.status in {"not_started", "initializing", "failed"}:
+        st.warning("技术指标缓存尚未就绪；本次暂不应用均线、新高和突破筛选。")
+        filters.update({f"above_ma{window}": False for window in (5, 10, 20, 60)})
+        filters.update({"recent_high": False, "ma_breakout": False})
     source_rows = st.session_state.get("scan_rows", [])
     rows = filter_scan_rows(source_rows, filters)
+    st.caption(f"历史指标：{history_status_display(history.status)}｜可用 {history.ready}/{history.total}"
+               f"｜不足60根 {history.insufficient}｜无历史 {history.unavailable}｜失败 {history.failed}")
     st.caption(f"扫描返回：{len(source_rows)}｜当前筛选：{len(rows)}｜显示前100条｜扫描池：{ctx['status']['active_universe']}")
     render_stock_table(rows[:100], "scanner_results")
     if rows:

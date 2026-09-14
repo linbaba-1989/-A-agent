@@ -198,7 +198,9 @@ def complete_daily_frame(frame: pd.DataFrame, now: datetime | None = None) -> pd
     else:
         timestamps = result["time"] if "time" in result.columns else result.index
         parsed = pd.to_datetime(timestamps, unit="ms", errors="coerce") if pd.api.types.is_numeric_dtype(timestamps) else pd.to_datetime(timestamps, errors="coerce")
-    mask = pd.Series(parsed, index=result.index).dt.date != today
+    # Stale quotes can predate the newest locally downloaded candle. Realtime
+    # indicators may only use completed candles before the quote trading date.
+    mask = pd.Series(parsed, index=result.index).dt.date < today
     return result.loc[mask.to_numpy()].copy()
 
 

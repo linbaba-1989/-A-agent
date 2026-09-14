@@ -31,7 +31,8 @@ def build_kline_figure(history: pd.DataFrame, days: int):
                             name="成交量", hovertemplate="%{y:,.0f}"), row=2, col=1)
     figure.update_layout(height=540, margin=dict(l=8, r=8, t=28, b=8), paper_bgcolor="#fff",
                          plot_bgcolor="#fff", hovermode="x unified", legend=dict(orientation="h", y=1.02),
-                         xaxis_rangeslider_visible=False)
+                         xaxis_rangeslider_visible=False,
+                         font={"family": '"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Segoe UI",Arial,sans-serif'})
     figure.update_xaxes(showgrid=False, rangebreaks=[dict(bounds=["sat", "mon"])])
     figure.update_yaxes(showgrid=True, gridcolor="#eef0f3", zeroline=False)
     return figure

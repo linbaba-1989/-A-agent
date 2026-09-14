@@ -45,7 +45,23 @@ def cn_change_color(value: Any) -> str:
 
 
 def market_label(status: str | None) -> str:
-    return "交易中" if status == "open" else "已收盘" if status == "closed" else "unavailable"
+    return "交易中" if status == "open" else "已收盘" if status == "closed" else "--"
+
+
+ANALYSIS_MODE_LABELS = {"standard": "标准", "deep": "深度", "max": "MAX"}
+
+
+def analysis_mode_display(value: str | None) -> str:
+    return ANALYSIS_MODE_LABELS.get(value or "", "--")
+
+
+def analysis_mode_value(label: str | None) -> str:
+    return {display: value for value, display in ANALYSIS_MODE_LABELS.items()}.get(label or "", "standard")
+
+
+def history_status_display(value: str | None) -> str:
+    return {"not_started": "尚未开始", "initializing": "正在初始化", "ready": "已就绪",
+            "partial": "部分可用", "failed": "初始化失败"}.get(value or "", "--")
 
 
 def display_value(value: Any, suffix: str = "") -> str:
