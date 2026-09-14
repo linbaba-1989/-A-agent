@@ -6,11 +6,14 @@ def render_status_strip(status: dict) -> None:
     connected = status["provider_status"] in ("connected", "fallback")
     provider_state = "已连接" if connected else "不可用"
     dot_class = "dot-ok" if connected else "dot-warn"
+    realtime_state = st.session_state.get("realtime_live_state")
+    if realtime_state not in ("LIVE", "STALE", "CLOSED"):
+        realtime_state = "CLOSED" if status.get("market") == "已收盘" else "STALE"
     st.markdown(
         "<div class='terminal-bar'>"
         f"{html.escape(str(status['provider']))} <span class='{dot_class}'>● {provider_state}</span>　｜　市场：{html.escape(str(status['market']))}　｜　"
         f"行情：{html.escape(str(status['last_quote_time']))}　｜　扫描池：{html.escape(str(status['active_universe']))}　｜　"
-        f"刷新：--　｜　QMT备用：{'不可用' if 'unavailable' in str(status['qmt_fallback']) else '可用'}"
+        f"刷新：{html.escape(realtime_state)}　｜　QMT备用：{'不可用' if 'unavailable' in str(status['qmt_fallback']) else '可用'}"
         "</div>", unsafe_allow_html=True)
 
 

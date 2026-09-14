@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-PAGES = ["▦  总览", "⌕  全A扫描", "☆  自选股", "▤  个股研究", "◆  AI研究院", "↗  策略回测", "⚙  设置"]
+PAGES = ["▦  总览", "◉  实时行情", "⌕  全A扫描", "☆  自选股", "▤  个股研究", "◆  AI研究院", "↗  策略回测", "⚙  设置"]
 PAGE_NAMES = {item: item.split("  ", 1)[-1] for item in PAGES}
 
 

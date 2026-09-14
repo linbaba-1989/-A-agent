@@ -40,6 +40,11 @@ h2 { font-size:1.18rem !important; }
 .system-strip { min-height:52px; justify-content:space-between; margin:7px 0; }
 .system-item b { font-size:16px; margin-left:5px; }
 .dot-ok { color:#12b76a; } .dot-warn { color:#f79009; } .dot-off { color:#98a2b3; }
+.price-flash-up { animation:flash-up .5s ease-out; }
+.price-flash-down { animation:flash-down .5s ease-out; }
+@keyframes flash-up { 0% { background:#fecdca; color:var(--cn-red); } 100% { background:transparent; } }
+@keyframes flash-down { 0% { background:#a6f4c5; color:var(--cn-green); } 100% { background:transparent; } }
+.live-badge { font-weight:700; color:var(--cn-red); } .stale-badge { color:#f79009; font-weight:700; }
 .terminal-table { width:100%; border-collapse:collapse; background:#fff; font-size:12px; }
 .terminal-table th { background:#f2f4f7; color:#475467; text-align:right; padding:6px 7px; border:1px solid var(--line); font-weight:500; }
 .terminal-table td { text-align:right; padding:6px 7px; border:1px solid #eef0f3; height:27px; }

@@ -11,6 +11,33 @@ from ui.components.stock_header import render_stock_header
 from ui.components.technical_panel import render_technical_panel
 from ui.stock_research_service import StockResearchService, toggle_watchlist
 from ui.view_models import FUNDAMENTAL_GAP_MESSAGE, normalize_symbol, safe_error
+from src.realtime_market import SnapshotConsumerState, live_state, refresh_interval_seconds
+
+
+def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -> None:
+    market_open = ctx["status"].get("market") == "交易中"
+    interval = refresh_interval_seconds(market_open, st.session_state.get("realtime_enabled", market_open), 1)
+
+    @st.fragment(run_every=interval)
+    def quote_fragment():
+        rows = ctx["realtime_feed"].snapshot([symbol])
+        if rows:
+            consumer = st.session_state.setdefault(f"stock_snapshot_consumer_{symbol}", SnapshotConsumerState())
+            row = consumer.consume(rows)[0]
+            previous_timestamp = st.session_state.get(f"quote_timestamp_{symbol}")
+            st.session_state[f"quote_timestamp_{symbol}"] = row["quote_timestamp"]
+            st.session_state.realtime_live_state = (live_state(previous_timestamp, row["quote_timestamp"])
+                                                     if market_open else "CLOSED")
+            quote = {**initial_quote, **row, "timestamp": row["quote_time"]}
+            render_stock_header(symbol, quote, name, ctx["status"]["market"])
+            cols = st.columns(3)
+            cols[0].metric("1分钟涨速", "--" if row["speed_1m"] == "unavailable" else f"{row['speed_1m']:.2f}%")
+            cols[1].metric("3分钟涨速", "--" if row["speed_3m"] == "unavailable" else f"{row['speed_3m']:.2f}%")
+            cols[2].metric("5分钟涨速", "--" if row["speed_5m"] == "unavailable" else f"{row['speed_5m']:.2f}%")
+        else:
+            render_stock_header(symbol, initial_quote, name, ctx["status"]["market"])
+
+    quote_fragment()
 
 
 def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
@@ -84,14 +111,18 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
     watched = symbol in watchlist
     if action.button("★ 已自选" if watched else "☆ 加入自选", width="stretch"):
         toggle_watchlist(watchlist, symbol); st.rerun()
-    render_stock_header(symbol, snapshot.quote, snapshot.facts["name"], ctx["status"]["market"])
+    _render_live_quote(ctx, symbol, snapshot.quote, snapshot.facts["name"])
 
     chart_area, technical = st.columns([3.25, 1], gap="medium")
     with chart_area:
         chart_type = st.segmented_control("周期", ["分时", "日K", "周K", "月K"], default="日K",
                                           label_visibility="collapsed") or "日K"
         if chart_type == "分时":
-            st.info("分时图仅在交易时段使用实时快照；当前不使用旧缓存伪造分钟行情。")
+            points = ctx["realtime_feed"].buffer.points(symbol)
+            if len(points) >= 2:
+                st.line_chart({"最新价": [point.last_price for point in points]}, height=380)
+            else:
+                st.info("分时从本次连接开始记录；当前快照不足，不补造连接前行情。")
         elif chart_type in ("周K", "月K"):
             st.info(f"{chart_type} 后续支持；不会使用日K数据冒充。")
         else:
