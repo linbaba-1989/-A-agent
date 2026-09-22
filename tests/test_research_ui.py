@@ -37,9 +37,15 @@ def test_state_and_elapsed_are_user_facing_stable():
 def test_models_and_modes_never_show_max_variant_or_infer_chief_fields():
     assert model_display("qwen3.8-max") == "Qwen 3.8 MAX"
     result = {"fact_data": facts(), "employees": {},
-              "chief_researcher": {"success": True, "data": {"confidence": 40}}}
+              "chief_researcher": {"success": True, "data": {"confidence": 40,
+                                                                  "short_term_view": "neutral_bearish",
+                                                                  "mid_term_view": "neutral_bullish",
+                                                                  "trend_state": "strong_up",
+                                                                  "risk_level": "medium"}}}
     summary = chief_summary(result)
     assert summary["stance"] is None
-    assert summary["trend"] is None
-    assert summary["risk"] is None
+    assert summary["short_term"] == "中性偏空"
+    assert summary["mid_term"] == "中性偏多"
+    assert summary["trend"] == "强势上行"
+    assert summary["risk"] == "中等"
     assert summary["confidence"] == 40

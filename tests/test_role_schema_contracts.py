@@ -19,12 +19,12 @@ CASES = [
         "confidence": 0, "summary": "情绪数据不足"}),
     (RiskReport, {"technical_risks": [], "data_quality_risks": ["fundamental unavailable"],
         "positioning_risks": [], "bull_case_challenges": [], "invalid_assumptions": [],
-        "missing_information": ["position"], "risk_level": "unknown", "confidence": 20,
+        "missing_information": ["position"], "risk_level": "unavailable", "confidence": 20,
         "summary": "风险数据有限"}),
     (ChiefReport, {"status": "degraded", "missing_roles": ["sentiment_analyst"],
         "confirmed_facts": [], "data_gaps": ["sentiment"], "bull_case": [], "bear_case": [],
         "key_catalysts": [], "key_risks": [], "technical_view": "neutral",
-        "fundamental_view": "unavailable", "sentiment_view": "unavailable", "risk_view": "unknown",
+        "fundamental_view": "unavailable", "sentiment_view": "unavailable", "risk_view": "unavailable",
         "points_of_agreement": [], "points_of_disagreement": [], "confidence": 20,
         "final_summary": "证据不足"}),
 ]
@@ -33,4 +33,6 @@ CASES = [
 @pytest.mark.parametrize(("schema", "payload"), CASES)
 def test_each_role_accepts_its_canonical_structured_output(schema, payload):
     parsed = schema.model_validate(payload)
-    assert parsed.model_dump() == payload
+    # New optional schema fields default to unavailable for old payloads;
+    # compare only fields supplied by the historical contract.
+    assert parsed.model_dump(exclude_unset=True) == payload

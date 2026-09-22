@@ -24,9 +24,9 @@ def render_ai_report(result: dict) -> None:
         return
     chief = view["chief"]
     st.subheader("AI 综合结论")
-    cols = st.columns(5)
-    for col, label, value in zip(cols, ("总体观点", "趋势状态", "风险等级", "置信度", "数据完整度"),
-                                 (view["stance"], view["trend"], view["risk"],
+    cols = st.columns(7)
+    for col, label, value in zip(cols, ("总体观点", "短线观点", "中期观点", "趋势状态", "风险等级", "置信度", "数据完整度"),
+                                 (view["stance"], view["short_term"], view["mid_term"], view["trend"], view["risk"],
                                   f"{view['confidence']} / 100" if view["confidence"] is not None else "--",
                                   view["data_status"])):
         col.metric(label, value or "--")

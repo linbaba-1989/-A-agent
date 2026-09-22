@@ -103,11 +103,21 @@ def chief_summary(result):
         return (row.get("data") or {}).get(key) if row.get("success") else None
     # Never infer stance from prose or bull/bear list lengths.
     stance = chief.get("overall_view") or chief.get("stance")
-    trend, risk = field("technical_analyst", "trend"), field("risk_officer", "risk_level")
-    trend_labels = {"strong_up": "强势上涨", "up": "上涨", "down": "下跌", "strong_down": "强势下跌",
-                    "sideways": "震荡", "neutral": "中性"}
-    risk_labels = {"low": "低", "medium": "中等", "high": "高"}
-    return {"stance": stance if present(stance) else None,
+    short_term = chief.get("short_term_view")
+    mid_term = chief.get("mid_term_view")
+    trend = chief.get("trend_state") or field("technical_analyst", "trend")
+    risk = chief.get("risk_level") or field("risk_officer", "risk_level")
+    view_labels = {"bullish": "偏多", "neutral_bullish": "中性偏多", "neutral": "中性",
+                   "neutral_bearish": "中性偏空", "bearish": "偏空", "unavailable": "数据不足"}
+    trend_labels = {"strong_up": "强势上行", "uptrend": "上升趋势", "range_up": "偏强震荡",
+                    "range": "区间震荡", "range_down": "偏弱震荡", "downtrend": "下降趋势",
+                    "strong_down": "强势下行", "unclear": "趋势不清晰", "unavailable": "数据不足",
+                    "up": "上行", "down": "下行"}
+    risk_labels = {"low": "低", "medium": "中等", "high": "高", "very_high": "极高",
+                   "unavailable": "数据不足"}
+    return {"stance": view_labels.get(stance, stance) if present(stance) else None,
+            "short_term": view_labels.get(short_term, short_term) if present(short_term) else None,
+            "mid_term": view_labels.get(mid_term, mid_term) if present(mid_term) else None,
             "trend": trend_labels.get(trend, trend) if present(trend) else None,
             "risk": risk_labels.get(risk, risk) if present(risk) else None,
             "confidence": chief.get("confidence"),
