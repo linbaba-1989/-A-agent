@@ -2,6 +2,7 @@ import streamlit as st
 
 from ui.components.ai_report import render_ai_report
 from ui.view_models import analysis_mode_display
+from ui.research_view import model_display
 
 ARENA_ROLES = {"技术": "technical_analyst", "基本面": "fundamental_event_analyst",
                "情绪": "sentiment_analyst", "风险": "risk_officer", "总研究员": "chief_researcher"}
@@ -10,7 +11,7 @@ ARENA_ROLES = {"技术": "technical_analyst", "基本面": "fundamental_event_an
 def arena_table(rows: list[dict], role: str) -> list[dict]:
     selected = [row for row in rows if row.get("role") == role]
     selected.sort(key=lambda row: (row.get("hard_fail", False), -float(row.get("overall_score", 0))))
-    return [{"模型": row.get("model_id", "--"), "综合分": row.get("overall_score", "--"),
+    return [{"模型": model_display(row.get("model_id")), "综合分": row.get("overall_score", "--"),
              "A股逻辑": row.get("a_share_logic_score", "--"),
              "事实落地": "PASS" if row.get("fact_grounding") else "FAIL",
              "幻觉": row.get("hallucination_count", "--"),

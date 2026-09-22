@@ -205,13 +205,12 @@ def apply_realtime_quote_status(status: dict[str, Any], current_timestamp: Any,
 
 
 def report_view(result: dict[str, Any]) -> dict[str, Any]:
+    from ui.research_view import chief_summary, workforce_data
     chief = result.get("chief_researcher", {})
     data = chief.get("data") or {}
-    confidence = data.get("confidence", 0)
-    bull, bear = len(data.get("bull_case", [])), len(data.get("bear_case", []))
-    stance = "偏多" if bull > bear else "偏空" if bear > bull else "中性"
-    return {"stance": stance, "confidence": confidence,
-            "data_status": "部分缺失" if data.get("data_gaps") or chief.get("status") == "degraded" else "完整",
+    summary = chief_summary(result)
+    return {"stance": summary["stance"], "trend": summary["trend"], "risk": summary["risk"],
+            "confidence": summary["confidence"], "data_status": summary["data_status"],
             "chief": data, "employees": result.get("employees", {}), "raw": result}
 
 

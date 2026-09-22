@@ -17,6 +17,7 @@ from ui.view_models import (ANALYSIS_MODE_LABELS, FUNDAMENTAL_GAP_MESSAGE, analy
 from src.market_clock import (DEFAULT_TRADING_CALENDAR, OPEN, beijing_now,
                               market_session as current_market_session, should_fetch_quotes)
 from src.realtime_market import SnapshotConsumerState, market_quote_timestamp, refresh_interval_seconds
+from ui.research_view import configured_models
 
 
 def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -> None:
@@ -82,8 +83,6 @@ def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
     result["elapsed_seconds"] = time.perf_counter() - started
     result["created_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     placeholder.empty()
-    render_ai_states(ctx["workforce"].router.role_states,
-                     {**result["employees"], "chief_researcher": result["chief_researcher"]})
     return result
 
 
@@ -178,7 +177,8 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
                                          default=analysis_mode_display(mode) if mode in ANALYSIS_MODE_LABELS else "标准",
                                          label_visibility="collapsed") or "标准"
     ai_mode = analysis_mode_value(selected_mode)
-    render_ai_states({role: "idle" for role in ctx["routes"]})
+    render_ai_states({role: "idle" for role in ctx["routes"]}, facts=snapshot.facts,
+                     models=configured_models(ctx))
     st.caption(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确记录数据缺口。")
     if st.button("开始AI研究", type="primary"):
         try:
@@ -191,5 +191,7 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
             with st.expander("查看详细错误"): st.code(detail or message)
     latest = next(iter(_recent_records(symbol)), None)
     if latest:
-        render_ai_report(latest)
+        render_ai_states(ctx["workforce"].router.role_states,
+                         {**latest.get("employees", {}), "chief_researcher": latest.get("chief_researcher", {})},
+                         facts=latest.get("fact_data", snapshot.facts), models=configured_models(ctx))
     _render_records(symbol)

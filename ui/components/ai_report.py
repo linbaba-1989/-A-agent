@@ -24,10 +24,14 @@ def render_ai_report(result: dict) -> None:
         return
     chief = view["chief"]
     st.subheader("AI 综合结论")
-    cols = st.columns(3)
-    cols[0].metric("总体观点", view["stance"])
-    cols[1].metric("置信度", f"{view['confidence']} / 100")
-    cols[2].metric("数据状态", view["data_status"])
+    cols = st.columns(5)
+    for col, label, value in zip(cols, ("总体观点", "趋势状态", "风险等级", "置信度", "数据完整度"),
+                                 (view["stance"], view["trend"], view["risk"],
+                                  f"{view['confidence']} / 100" if view["confidence"] is not None else "--",
+                                  view["data_status"])):
+        col.metric(label, value or "--")
+    if view["data_status"] != "可用":
+        st.info(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确标注数据状态。")
     st.markdown("### 总研究员结论")
     st.write(chief.get("final_summary", "--"))
     employees = view["employees"]
@@ -42,8 +46,8 @@ def render_ai_report(result: dict) -> None:
                            ("压力", "resistance"), ("突破", "breakout_status")):
             _list(label, technical.get(key) if isinstance(technical.get(key), list) else [technical.get(key)] if technical.get(key) else [])
     with tabs[1]:
-        if fundamental.get("data_status") == "unavailable":
-            st.warning(FUNDAMENTAL_GAP_MESSAGE)
+        if fundamental.get("data_status") in {"unavailable", "partial"}:
+            st.caption("数据：" + ("不可用" if fundamental.get("data_status") == "unavailable" else "部分可用"))
         st.write(fundamental.get("summary", "--"))
     with tabs[2]: st.write(sentiment.get("summary", "--"))
     with tabs[3]: st.write(risk.get("summary", "--"))

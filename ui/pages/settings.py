@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from ui.components.acceptance import render_source_controls, render_developer_tools
+from ui.research_view import model_display
 
 
 ROLE_NAMES = {"technical_analyst": "技术分析员", "fundamental_event_analyst": "基本面分析员",
@@ -29,7 +30,7 @@ def render(ctx: dict) -> None:
         for item in ctx["registry"].statuses():
             roles = " / ".join(production_roles.get(item["provider_name"], []))
             state = "● 就绪" if item["configured"] else "○ 未配置"
-            rows.append({"服务商": item["provider_name"], "模型": item["model_name"] or "未指定",
+            rows.append({"服务商": item["provider_name"], "模型": model_display(item["model_name"]) if item["model_name"] else "未指定",
                          "状态": state, "用途": f"生产模型：{roles}" if roles else "候选模型",
                          "成本": item["pricing_status"]})
         st.dataframe(rows, hide_index=True, width="stretch")
@@ -38,7 +39,7 @@ def render(ctx: dict) -> None:
         for role, route in ctx["routes"].items():
             candidate = route["candidates"][0]
             rows.append({"AI员工": ROLE_NAMES[role], "服务商": candidate["provider"],
-                         "模型": candidate.get("model") or "当前 Endpoint"})
+                         "模型": model_display(candidate.get("model")) if candidate.get("model") else "当前 Endpoint"})
         st.dataframe(rows, hide_index=True, width="stretch")
     with system:
         st.write("A-Agent V1.0 UI P1.2")

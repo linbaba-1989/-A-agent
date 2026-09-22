@@ -1,21 +1,25 @@
+import html
 import streamlit as st
+from ui.research_view import ROLES, DATA_LABELS, elapsed_display, execution_state, model_display, workforce_data
 
-from ui.view_models import role_state
-
-
-ROLE_NAMES = {"technical_analyst": "技术分析员 · DeepSeek V4-Pro",
-              "fundamental_event_analyst": "基本面/事件分析员 · Qwen 3.8 Max",
-              "sentiment_analyst": "市场情绪分析员 · Doubao",
-              "risk_officer": "风险官 · Kimi K3", "chief_researcher": "总研究员 · DeepSeek V4-Pro"}
+ROLE_NAMES = ROLES
 
 
-def render_ai_states(states: dict, results: dict | None = None) -> None:
-    results = results or {}
-    cols = st.columns(5)
-    for col, role in zip(cols, ROLE_NAMES):
-        result = results.get(role, {})
-        status = result.get("status") or ("complete" if result.get("success") else states.get(role))
-        col.markdown(f"**{ROLE_NAMES[role]}**")
-        col.caption(f"状态：{role_state(status)}")
-        if result.get("latency") is not None:
-            col.caption(f"耗时：{result['latency']:.2f}s")
+def render_ai_states(states, results=None, *, facts=None, models=None):
+    results, models = results or {}, models or {}
+    data = workforce_data({"fact_data": facts, "employees": results,
+                           "chief_researcher": results.get("chief_researcher", {})})
+    colors = {"等待": "#667085", "运行中": "#175cd3", "完成": "#067647", "失败": "#b54708", "超时": "#b54708"}
+    for col, (role, name) in zip(st.columns(5), ROLES.items()):
+        row = results.get(role) or {}
+        status = execution_state(states.get(role), row)
+        model = model_display(row.get("actual_model") or row.get("model") or models.get(role))
+        if row.get("fallback") is True: model += "（fallback）"
+        with col.container(border=True):
+            st.markdown(f"**{name}**")
+            st.caption(model)
+            st.markdown(f"<span style='color:{colors[status]}'>状态：{html.escape(status)}</span>", unsafe_allow_html=True)
+            st.caption(f"耗时：{elapsed_display(row.get('latency'))}")
+            st.caption(f"数据：{DATA_LABELS[data[role]]}")
+            if row.get("success") and data[role] != "available":
+                st.caption("基于有限数据生成")
