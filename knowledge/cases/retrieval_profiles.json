@@ -1,0 +1,52 @@
+{
+  "technical_analyst": [
+    {"case_id":"technical-01","title":"放量突破","scenario_tags":["volume_breakout","breakout_attempt"],"required_tags":["volume_breakout"],"data_requirements":{"last_price":true,"volume_ratio":true},"focus":"先核实量能和收盘确认；只有突破尝试时，breakout_state保持未确认。"},
+    {"case_id":"technical-02","title":"假突破","scenario_tags":["false_breakout","breakout_unconfirmed"],"required_tags":["false_breakout"],"data_requirements":{"high":true,"last_price":true,"high_20d":true},"focus":"区分盘中越过参考位和收盘站稳；条件失效不等于交易指令。"},
+    {"case_id":"technical-03","title":"缩量回踩","scenario_tags":["low_volume_pullback","strong_trend_pullback"],"required_tags":["low_volume_pullback"],"data_requirements":{"volume_ratio":true,"change_pct":true},"trend_states":["strong_up","uptrend"],"focus":"分开短期回踩与中期趋势；MA20/60仍有支撑时不自动判趋势破坏。"},
+    {"case_id":"technical-04","title":"放量滞涨","scenario_tags":["volume_stagnation"],"required_tags":["volume_stagnation"],"data_requirements":{"volume_ratio":true,"change_pct":true},"focus":"量价背离只表达为风险线索，不能推导资金主体。"},
+    {"case_id":"technical-05","title":"冲高回落","scenario_tags":["intraday_reversal_down","false_breakout"],"required_tags":["intraday_reversal_down"],"data_requirements":{"high":true,"low":true,"last_price":true},"focus":"说明日内位置转弱；不能自动改写中期判断。"},
+    {"case_id":"technical-06","title":"探底回升","scenario_tags":["intraday_reversal_up"],"required_tags":["intraday_reversal_up"],"data_requirements":{"high":true,"low":true,"last_price":true},"focus":"回升仅是当前结构证据，继续检查上方均线约束。"},
+    {"case_id":"technical-07","title":"高位加速","scenario_tags":["high_acceleration","high_position"],"required_tags":["high_acceleration"],"data_requirements":{"range_position_20d":true,"change_pct":true},"focus":"趋势与高位风险分别表达，不预测确定收益。"},
+    {"case_id":"technical-08","title":"强趋势但波动高","scenario_tags":["high_volatility","trend_up"],"required_tags":["high_volatility","trend_up"],"trend_states":["strong_up","uptrend"],"focus":"强趋势不消除波动风险；失效条件引用已有均线与量价证据。"}
+  ],
+  "sentiment_analyst": [
+    {"case_id":"sentiment-01","title":"市场冰点","scenario_tags":["phase_ice"],"required_tags":["phase_ice"],"market_required":true},
+    {"case_id":"sentiment-02","title":"冰点修复","scenario_tags":["phase_repair"],"required_tags":["phase_repair"],"market_required":true},
+    {"case_id":"sentiment-03","title":"情绪高潮","scenario_tags":["phase_climax"],"required_tags":["phase_climax"],"market_required":true},
+    {"case_id":"sentiment-04","title":"高潮后分歧","scenario_tags":["phase_divergence"],"required_tags":["phase_divergence"],"market_required":true},
+    {"case_id":"sentiment-05","title":"退潮","scenario_tags":["phase_retreat"],"required_tags":["phase_retreat"],"market_required":true},
+    {"case_id":"sentiment-06","title":"高标负反馈","scenario_tags":["leader_negative"],"required_tags":["leader_negative"],"data_requirements":{"high_board_feedback":true}},
+    {"case_id":"sentiment-07","title":"强趋势但情绪过热","scenario_tags":["trend_hot_sentiment","trend_up"],"required_tags":["trend_hot_sentiment"],"market_required":true,"signal_conflicts":["sentiment_risk"]},
+    {"case_id":"sentiment-08","title":"个股强但板块弱","scenario_tags":["stock_sector_conflict","individual_strength"],"required_tags":["stock_sector_conflict"],"data_requirements":{"sector_strength":true,"change_pct":true},"signal_conflicts":["stock_sector"]}
+  ],
+  "fundamental_event_analyst": [
+    {"case_id":"fundamental-01","title":"公告A级证据","scenario_tags":["announcement"],"required_tags":["announcement"],"data_requirements":{"announcement_data":true},"evidence_patterns":["source_document"],"focus":"保留公告来源与原有事实范围，不把公告等同于业绩兑现。"},
+    {"case_id":"fundamental-02","title":"官方B级信息","scenario_tags":["official"],"required_tags":["official"],"data_requirements":{"official_data":true}},
+    {"case_id":"fundamental-03","title":"媒体C级报道","scenario_tags":["news"],"required_tags":["news"],"data_requirements":{"news_data":true},"evidence_patterns":["unconfirmed_reporting"]},
+    {"case_id":"fundamental-04","title":"行业传闻D级","scenario_tags":["unconfirmed_events"],"required_tags":["unconfirmed_events"],"data_requirements":{"unconfirmed_events":true},"evidence_patterns":["unconfirmed_reporting"],"focus":"传闻只放入unconfirmed_events，不得升级为confirmed事实。"},
+    {"case_id":"fundamental-05","title":"合同收入确认","scenario_tags":["contract_data","revenue_data"],"required_tags":["contract_data"],"data_requirements":{"contract_data":true},"focus":"合同金额和已确认收入分开；没有收入证据不推导盈利改善。"},
+    {"case_id":"fundamental-06","title":"行业景气传导","scenario_tags":["industry"],"required_tags":["industry"],"data_requirements":{"industry_data":true},"focus":"行业证据不自动构成个股盈利证据。"},
+    {"case_id":"fundamental-07","title":"产品与订单区别","scenario_tags":["product_data","order_data"],"required_tags":["product_data"],"data_requirements":{"product_data":true},"focus":"产品存在不等于取得订单，没有订单材料保留unavailable。"},
+    {"case_id":"fundamental-08","title":"数据完全缺失","scenario_tags":["fundamental_missing"],"required_tags":["fundamental_missing"],"data_requirements":{"fundamental_data":false,"valuation_data":false,"announcement_data":false,"news_data":false},"evidence_patterns":["fundamental_unavailable"],"focus":"fundamental_view/event_view为unavailable；不得用价格上涨推导财报、公告或业绩改善。"}
+  ],
+  "risk_officer": [
+    {"case_id":"risk-01","title":"高位风险","scenario_tags":["high_position","high_acceleration"],"required_tags":["high_position"],"data_requirements":{"range_position_20d":true}},
+    {"case_id":"risk-02","title":"ATR风险","scenario_tags":["high_volatility","trend_up","trend_risk_conflict"],"required_tags":["high_volatility"],"trend_states":["strong_up","uptrend"],"signal_conflicts":["technical_risk"],"focus":"trend_state可以强势而risk_level较高；protective_conditions与invalidation_conditions并列，max_confidence_allowed不超事实限制。"},
+    {"case_id":"risk-03","title":"流动性风险","scenario_tags":["low_liquidity"],"required_tags":["low_liquidity"],"data_requirements":{"amount":true}},
+    {"case_id":"risk-04","title":"跌停退出风险","scenario_tags":["limit_down_exit"],"required_tags":["limit_down_exit"]},
+    {"case_id":"risk-05","title":"高换手风险","scenario_tags":["crowding","trend_risk_conflict"],"required_tags":["crowding"],"data_requirements":{"turnover_rate":true}},
+    {"case_id":"risk-06","title":"放量滞涨风险","scenario_tags":["volume_stagnation"],"required_tags":["volume_stagnation"],"data_requirements":{"volume_ratio":true,"change_pct":true}},
+    {"case_id":"risk-07","title":"趋势破坏风险","scenario_tags":["ma_break_risk","weak_rebound","breakout_unconfirmed"],"required_any":["ma_break_risk","breakout_unconfirmed"],"focus":"核实关键均线与突破有效性，列明判断失效条件，不给买卖指令。"},
+    {"case_id":"risk-08","title":"数据缺失风险","scenario_tags":["severe_missing","data_gaps","event_gap"],"required_tags":["data_gaps"],"evidence_patterns":["incomplete","insufficient"],"focus":"缺失事件与情绪证据降低max_confidence_allowed；不能把缺失解释为低风险。"}
+  ],
+  "chief_researcher": [
+    {"case_id":"chief-01","title":"趋势与风险冲突","scenario_tags":["trend_risk_conflict","role_disagreement"],"required_any":["trend_risk_conflict","role_disagreement"],"signal_conflicts":["technical_risk","specialists"],"focus":"列入key_conflicts并区分趋势与风险；禁止按角色票数决定方向。"},
+    {"case_id":"chief-02","title":"情绪过热冲突","scenario_tags":["trend_hot_sentiment"],"required_tags":["trend_hot_sentiment"],"signal_conflicts":["sentiment_risk"]},
+    {"case_id":"chief-03","title":"基本面缺失","scenario_tags":["fundamental_missing","data_gaps"],"required_tags":["fundamental_missing"],"data_requirements":{"fundamental_data":false},"evidence_patterns":["fundamental_unavailable"],"focus":"技术证据可用不填补基本面/情绪缺口，保留missing_evidence及原confidence_cap。"},
+    {"case_id":"chief-04","title":"角色失败降级","scenario_tags":["role_failure"],"required_tags":["role_failure"],"focus":"失败角色保持unavailable，不能由其他角色代造证据。"},
+    {"case_id":"chief-05","title":"证据等级冲突","scenario_tags":["evidence_conflict","role_disagreement"],"required_any":["evidence_conflict","role_disagreement"],"evidence_patterns":["incomplete"],"signal_conflicts":["specialists"],"focus":"confirmed/derived/unavailable保持输入等级，冲突写入key_conflicts。"},
+    {"case_id":"chief-06","title":"风险保护并存","scenario_tags":["protection_and_risk"],"required_tags":["protection_and_risk"],"signal_conflicts":["technical_risk"],"focus":"支持条件与失效条件同时保留，不把风险误当成趋势已经破坏。"},
+    {"case_id":"chief-07","title":"数据新鲜度不足","scenario_tags":["stale_evidence"],"required_tags":["stale_evidence"],"evidence_patterns":["stale"]},
+    {"case_id":"chief-08","title":"严重数据不足","scenario_tags":["severe_missing","data_gaps","low_confidence_cap"],"required_tags":["severe_missing"],"evidence_patterns":["insufficient","incomplete"],"focus":"整体证据不足，观点用unavailable；confidence不得超过事实cap，列明missing_evidence。"}
+  ]
+}

@@ -10,6 +10,7 @@ from .agent_schemas import (ChiefReport, FundamentalEventReport, RiskReport,
 from .llm_router import LLMRouter, RouterResult
 from .a_share_factors import build_role_factors
 from .knowledge_loader import load_role_knowledge, structured_prompt
+from .few_shot import FewShotRetriever
 
 ROLE_SCHEMAS = {
     "technical_analyst": TechnicalReport,
@@ -27,13 +28,17 @@ PROMPT_FILES = {
 
 
 class StockResearchAgent:
-    def __init__(self, router: LLMRouter | None = None, prompt_dir: str | Path | None = None):
+    def __init__(self, router: LLMRouter | None = None, prompt_dir: str | Path | None = None,
+                 few_shot_retriever: FewShotRetriever | None = None):
         self.router = router or LLMRouter()
         self.prompt_dir = Path(prompt_dir or Path(__file__).resolve().parents[1] / "prompts")
+        self.few_shot = few_shot_retriever or FewShotRetriever()
+        self._few_shot_audit: dict[str, dict] = {}
 
-    def _prompt(self, role: str) -> str:
+    def _prompt(self, role: str, few_shot_text: str = "") -> str:
         role_text = (self.prompt_dir / PROMPT_FILES[role]).read_text(encoding="utf-8")
-        return structured_prompt(role_text, load_role_knowledge(role))
+        prompt = structured_prompt(role_text, load_role_knowledge(role))
+        return prompt + ("\n\n" + few_shot_text if few_shot_text else "")
 
     @staticmethod
     def _role_facts(role: str, facts: dict[str, Any]) -> dict[str, Any]:
@@ -64,7 +69,9 @@ class StockResearchAgent:
 
     def _role_call(self, role: str, facts: dict[str, Any], analysis_id: str, analysis_mode: str) -> RouterResult:
         role_facts = self._role_facts(role, facts)
-        messages = [{"role": "system", "content": self._prompt(role)},
+        few_shot_text, audit = self.few_shot.retrieve(role, facts)
+        self._few_shot_audit[role] = audit
+        messages = [{"role": "system", "content": self._prompt(role, few_shot_text)},
                     {"role": "user", "content": "FACT DATA（只读）：\n" +
                      json.dumps(role_facts, ensure_ascii=False, default=str)}]
         return self.router.call(role, messages, ROLE_SCHEMAS[role], analysis_id, analysis_mode)
@@ -103,9 +110,17 @@ class StockResearchAgent:
             return {"analysis_id": analysis_id, "analysis_mode": analysis_mode,
                     "symbol": symbol, "fact_data": immutable_facts,
                     "employees": {role: vars(result) for role, result in role_results.items()},
-                    "chief_researcher": vars(chief)}
+                    "chief_researcher": vars(chief), "few_shot_audit": dict(self._few_shot_audit)}
         chief_status = "degraded" if len(successful) == 1 else "complete"
-        chief_messages = [{"role": "system", "content": self._prompt("chief_researcher")},
+        specialist_context = {
+            role: {"success": result.success, "data": result.data}
+            for role, result in role_results.items()
+        }
+        chief_few_shot, chief_audit = self.few_shot.retrieve(
+            "chief_researcher", immutable_facts, specialist_context
+        )
+        self._few_shot_audit["chief_researcher"] = chief_audit
+        chief_messages = [{"role": "system", "content": self._prompt("chief_researcher", chief_few_shot)},
                           {"role": "user", "content": json.dumps(
                               {"analysis_id": analysis_id, "FACT DATA": immutable_facts,
                                "specialist_success_count": len(successful), "status": chief_status,
@@ -119,4 +134,4 @@ class StockResearchAgent:
         return {"analysis_id": analysis_id, "analysis_mode": analysis_mode,
                 "symbol": symbol, "fact_data": immutable_facts,
                 "employees": {role: vars(result) for role, result in role_results.items()},
-                "chief_researcher": vars(chief)}
+                "chief_researcher": vars(chief), "few_shot_audit": dict(self._few_shot_audit)}
