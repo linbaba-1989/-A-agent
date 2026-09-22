@@ -7,6 +7,7 @@ CSS = """
 html,body,.stApp,.stApp *,button,input,select,textarea,table,[role="tab"] {
   font-family:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Segoe UI",Arial,sans-serif !important;
 }
+[data-testid="stIconMaterial"] { font-family:"Material Symbols Rounded" !important; }
 .terminal-table td,[data-testid="stMetricValue"],[data-testid="stNumberInput"] input {
   font-variant-numeric:tabular-nums;
 }
@@ -58,7 +59,10 @@ h2 { font-size:1.18rem !important; }
 .empty-row { color:#98a2b3; text-align:center !important; height:32px !important; }
 .side-panel-title { font-size:14px; font-weight:650; border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:5px; }
 .ai-line { display:flex; justify-content:space-between; padding:4px 0; font-size:12px; border-bottom:1px dotted #eaecf0; }
-#MainMenu, [data-testid="stHeader"], [data-testid="stToolbar"], footer { visibility:hidden; height:0; }
+#MainMenu, [data-testid="stStatusWidget"], [data-testid="stAppDeployButton"], footer { visibility:hidden; height:0; }
+[data-testid="stHeader"] { visibility:visible; height:0; overflow:visible; background:transparent; }
+[data-testid="stToolbar"] { visibility:visible; height:0; overflow:visible; }
+[data-testid="stExpandSidebarButton"] { visibility:visible; }
 button { border-radius:3px !important; }
 @media (max-width:1440px) {
   [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child { width:160px !important; min-width:160px !important; }

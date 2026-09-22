@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+from ui.components.acceptance import render_source_controls, render_developer_tools
 
 
 ROLE_NAMES = {"technical_analyst": "技术分析员", "fundamental_event_analyst": "基本面分析员",
@@ -10,6 +11,7 @@ def render(ctx: dict) -> None:
     st.title("设置")
     market, models, employees, system = st.tabs(["行情", "AI模型", "AI员工", "系统"])
     with market:
+        render_source_controls(ctx)
         status = ctx["status"]
         cols = st.columns(4)
         cols[0].metric("当前行情源", status["provider"])
@@ -41,3 +43,4 @@ def render(ctx: dict) -> None:
     with system:
         st.write("A-Agent V1.0 UI P1.2")
         st.caption("研究辅助工具，不执行自动交易。")
+        render_developer_tools()

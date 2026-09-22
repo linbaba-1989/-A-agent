@@ -17,6 +17,9 @@ class MarketDataSelection:
     reason: str | None = None
     token_expiry: str = "unknown"
     qmt_fallback_status: str = "unknown"
+    required_source: str | None = None
+    fallback_enabled: bool = True
+    token_configured: bool = False
 
 
 class MarketDataRouter:
@@ -26,7 +29,26 @@ class MarketDataRouter:
         self.qmt_factory = qmt_factory
         self.selection: MarketDataSelection | None = None
 
-    def select(self) -> MarketDataSelection:
+    def select(self, *, acceptance_source: str | None = None,
+               preferred_source: str = "auto") -> MarketDataSelection:
+        if acceptance_source not in {None, "xtdatacenter"}:
+            raise ValueError("unsupported_acceptance_source")
+        if preferred_source not in {"auto", "xtdatacenter", "qmt"}:
+            raise ValueError("unsupported_market_source")
+        if acceptance_source == "xtdatacenter" or preferred_source == "xtdatacenter":
+            return self._select_token_only(acceptance_source is not None)
+        if preferred_source == "qmt":
+            qmt_provider = self.qmt_factory()
+            diagnostic = qmt_provider.connection_diagnostics()
+            if diagnostic.connected:
+                self.selection = MarketDataSelection(qmt_provider, "QMT Local", "connected", False,
+                                                     fallback_enabled=False, qmt_fallback_status="disabled")
+            else:
+                if hasattr(qmt_provider, "close"):
+                    qmt_provider.close()
+                self.selection = MarketDataSelection(None, "unavailable", "failed", False,
+                                                     "qmt_unavailable", fallback_enabled=False)
+            return self.selection
         token_provider = self.xtdc_factory()
         token_reason = "xtdc_token_missing"
         if getattr(token_provider, "configured", False):
@@ -57,6 +79,35 @@ class MarketDataRouter:
             f"xtdc={token_reason}; qmt={diagnostic.message}",
             qmt_fallback_status="configured / unavailable",
         )
+        return self.selection
+
+    def _select_token_only(self, acceptance: bool) -> MarketDataSelection:
+        """Fail closed before any QMT factory/check; never log provider secrets."""
+        provider = None
+        configured = False
+        reason = "xtdc_not_configured"
+        try:
+            provider = self.xtdc_factory()
+            configured = bool(getattr(provider, "configured", False))
+            if configured:
+                result = provider.check_connection()
+                if result.ok:
+                    self.selection = MarketDataSelection(
+                        provider, "XtDataCenter Token", "connected", False,
+                        qmt_fallback_status="disabled", fallback_enabled=False,
+                        required_source="XtDataCenter Token" if acceptance else None,
+                        token_configured=True)
+                    return self.selection
+                reason = "xtdc_unavailable"
+        except Exception as exc:
+            reason = f"xtdc_check_failed:{type(exc).__name__}"
+        finally:
+            if provider is not None and (self.selection is None or self.selection.provider is not provider):
+                provider.close()
+        self.selection = MarketDataSelection(
+            None, "unavailable", "SOURCE_BLOCKED" if acceptance else "failed", False, reason,
+            qmt_fallback_status="disabled", fallback_enabled=False,
+            required_source="XtDataCenter Token" if acceptance else None, token_configured=configured)
         return self.selection
 
     def require_provider(self) -> Any:

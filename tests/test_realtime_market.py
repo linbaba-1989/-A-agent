@@ -1,8 +1,12 @@
 from datetime import datetime
 from types import SimpleNamespace
 
+import pytest
+
 from src.realtime_market import (RealtimeMarketFeed, RealtimePoint, RealtimeSnapshotBuffer, SnapshotConsumerState,
-                                 live_state, price_flash, rank_rows, refresh_interval_seconds)
+                                 live_state, market_quote_timestamp, price_flash, rank_rows,
+                                 refresh_interval_seconds)
+from src.market_clock import OPEN
 from ui.pages.realtime_market import _events
 
 
@@ -16,13 +20,13 @@ def test_price_flash_uses_a_share_colors_and_unchanged_has_no_flash():
     assert price_flash(10, 10) == ""
 
 
-def test_buffer_speeds_and_maximum_length():
+def test_buffer_capacity_hint_does_not_truncate_time_window():
     buf = RealtimeSnapshotBuffer(maxlen=3)
     for minute, price in enumerate((10, 11, 12, 13)):
         buf.append("A", RealtimePoint(ts(f"2026-09-14 10:0{minute}:00"), price))
-    assert len(buf.points("A")) == 3
+    assert len(buf.points("A")) == 4
     assert buf.speed("A", 1) == round((13 / 12 - 1) * 100, 4)
-    assert buf.speed("A", 3) == "unavailable"
+    assert buf.speed("A", 3) == 30.0
 
 
 def test_one_three_five_minute_speeds_use_same_session_snapshots():
@@ -142,3 +146,117 @@ def test_feed_cache_contains_sequence_metadata_but_never_flash_event():
     assert fresh[0]["snapshot_seq"] == cached[0]["snapshot_seq"] == 1
     assert not fresh[0]["from_cache"] and cached[0]["from_cache"]
     assert "flash_class" not in fresh[0] and "flash_class" not in cached[0]
+
+
+class SequencedProvider:
+    def __init__(self, quote_times, prices):
+        self.quote_times = list(quote_times)
+        self.prices = list(prices)
+        self.calls = 0
+
+    def get_stock_universe(self):
+        return ["A"]
+
+    def get_full_ticks(self, symbols):
+        index = min(self.calls, len(self.quote_times) - 1)
+        self.calls += 1
+        quote_time = ts(self.quote_times[index])
+        price = self.prices[min(index, len(self.prices) - 1)]
+        return {symbol: {"lastPrice": price, "lastClose": 10, "time": quote_time * 1000,
+                         "volume": 100, "amount": 1000} for symbol in symbols}
+
+    def _valid_tick(self, tick, require_time=False):
+        return bool(tick and tick.get("lastPrice") and tick.get("lastClose") and
+                    (not require_time or tick.get("time")))
+
+    def tick_timestamp(self, tick):
+        return tick["time"] / 1000
+
+
+def test_provider_raw_time_progresses_to_feed_live_with_request_diagnostics():
+    provider = SequencedProvider(("2026-09-15 09:44:00", "2026-09-15 09:45:00"), (10, 10.1))
+    feed = RealtimeMarketFeed(provider)
+    first = feed.snapshot(force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 45))
+    second = feed.snapshot(force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 45, 1))
+
+    diagnostics = feed.diagnostics()
+    assert provider.calls == feed.provider_request_count == 2
+    assert [first[0]["snapshot_seq"], second[0]["snapshot_seq"]] == [1, 2]
+    assert diagnostics[0]["quote_status"] == "STALE"
+    assert diagnostics[1]["quote_status"] == "LIVE"
+    assert diagnostics[1]["provider_raw_max_quote_time"].startswith("2026-09-15T09:45:00")
+    assert diagnostics[1]["feed_quote_time"].startswith("2026-09-15T09:45:00")
+    assert diagnostics[1]["valid_quote_count"] == diagnostics[1]["provider_raw_valid_quote_count"] == 1
+    assert diagnostics[1]["from_cache"] is False
+    assert diagnostics[1]["request_started_at"] and diagnostics[1]["request_finished_at"]
+
+
+def test_provider_raw_time_not_progressing_is_stale_during_open():
+    provider = SequencedProvider(("2026-09-15 09:44:00", "2026-09-15 09:44:00"), (10, 10))
+    feed = RealtimeMarketFeed(provider)
+    feed.snapshot(force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 45))
+    feed.snapshot(force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 46))
+
+    diagnostics = feed.diagnostics()
+    assert provider.calls == 2
+    assert diagnostics[-1]["quote_status"] == "STALE"
+    assert diagnostics[-1]["provider_raw_max_quote_time"] == diagnostics[-2]["provider_raw_max_quote_time"]
+    assert diagnostics[-1]["feed_snapshot_seq"] == 2
+
+
+def test_successful_sequence_increment_replaces_rows_and_cache_marks_from_cache():
+    provider = SequencedProvider(("2026-09-15 09:44:00", "2026-09-15 09:44:00"), (10, 11))
+    feed = RealtimeMarketFeed(provider)
+    first = feed.snapshot(["A"], force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 45))
+    second = feed.snapshot(["A"], force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 46))
+    cached = feed.cached(["A"])
+
+    diagnostic = feed.diagnostics()[-1]
+    assert first[0]["lastPrice"] == 10 and second[0]["lastPrice"] == 11
+    assert second[0]["snapshot_seq"] == first[0]["snapshot_seq"] + 1 == 2
+    assert diagnostic["rows_replaced_count"] == diagnostic["valid_quote_count"] == 1
+    assert diagnostic["rows_changed_count"] == 1
+    assert cached[0]["snapshot_seq"] == 2 and cached[0]["from_cache"] is True
+
+
+def test_snapshot_sequence_does_not_increment_when_provider_fetch_fails():
+    class FailingProvider(SequencedProvider):
+        def get_full_ticks(self, symbols):
+            self.calls += 1
+            raise RuntimeError("provider_fetch_failed")
+
+    feed = RealtimeMarketFeed(FailingProvider(("2026-09-15 09:44:00",), (10,)))
+    with pytest.raises(RuntimeError, match="provider_fetch_failed"):
+        feed.snapshot(["A"], force=True, market_session=OPEN, now=datetime(2026, 9, 15, 9, 45))
+    assert feed.snapshot_seq == 0
+    assert feed.diagnostics()[-1]["error"] == "RuntimeError"
+
+
+def test_market_quote_time_uses_newest_valid_row_not_first_or_symbol_cache():
+    old = ts("2026-09-15 09:44:00")
+    new = ts("2026-09-15 09:45:00")
+    rows = [{"symbol": "600498.SH", "quote_timestamp": old},
+            {"symbol": "600000.SH", "quote_timestamp": new},
+            {"symbol": "000001.SZ", "quote_timestamp": "unavailable"}]
+    assert market_quote_timestamp(rows) == new
+
+
+def test_non_trading_symbol_does_not_regress_market_timestamp():
+    class MultiSymbolProvider(SequencedProvider):
+        def get_stock_universe(self):
+            return ["600498.SH", "600000.SH"]
+
+        def get_full_ticks(self, symbols):
+            self.calls += 1
+            values = {"600498.SH": ts("2026-09-15 09:40:00"),
+                      "600000.SH": ts("2026-09-15 09:45:00")}
+            return {symbol: {"lastPrice": 10, "lastClose": 10, "time": values[symbol] * 1000}
+                    for symbol in symbols}
+
+    feed = RealtimeMarketFeed(MultiSymbolProvider(("unused",), (10,)))
+    rows = feed.snapshot(["600498.SH", "600000.SH"], force=True, market_session=OPEN,
+                         now=datetime(2026, 9, 15, 9, 45))
+    single = feed.snapshot(["600498.SH"], force=True, market_session=OPEN,
+                           now=datetime(2026, 9, 15, 9, 46))
+    assert market_quote_timestamp(rows) == ts("2026-09-15 09:45:00")
+    assert market_quote_timestamp(single, feed.last_quote_timestamp) == ts("2026-09-15 09:45:00")

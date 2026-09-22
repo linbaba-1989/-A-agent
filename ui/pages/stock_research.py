@@ -10,33 +10,60 @@ from ui.components.kline_chart import render_kline
 from ui.components.stock_header import render_stock_header
 from ui.components.technical_panel import render_technical_panel
 from ui.stock_research_service import StockResearchService, toggle_watchlist
+from ui.components.market_status import render_status_strip
+from ui.components.topbar import render_topbar_status
 from ui.view_models import (ANALYSIS_MODE_LABELS, FUNDAMENTAL_GAP_MESSAGE, analysis_mode_display,
-                            analysis_mode_value, normalize_symbol, safe_error)
-from src.realtime_market import SnapshotConsumerState, live_state, refresh_interval_seconds
+                            analysis_mode_value, normalize_symbol, quote_status_display, safe_error)
+from src.market_clock import (DEFAULT_TRADING_CALENDAR, OPEN, beijing_now,
+                              market_session as current_market_session, should_fetch_quotes)
+from src.realtime_market import SnapshotConsumerState, market_quote_timestamp, refresh_interval_seconds
 
 
 def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -> None:
-    market_open = ctx["status"].get("market") == "交易中"
-    interval = refresh_interval_seconds(market_open, st.session_state.get("realtime_enabled", market_open), 1)
+    session = current_market_session(beijing_now(), ctx.get("market_calendar", DEFAULT_TRADING_CALENDAR))
+    market_open = session == OPEN
+    interval = refresh_interval_seconds(session, st.session_state.get("realtime_enabled", market_open), 1)
 
     @st.fragment(run_every=interval)
     def quote_fragment():
-        rows = ctx["realtime_feed"].snapshot([symbol])
+        now = beijing_now()
+        session = current_market_session(now, ctx.get("market_calendar", DEFAULT_TRADING_CALENDAR))
+        enabled = bool(st.session_state.get("realtime_enabled", session == OPEN))
+        feed = ctx["realtime_feed"]
+        if should_fetch_quotes(session) and enabled:
+            feed.ensure_fresh_provider_probe(session, now=now, symbols=[symbol])
+            rows = feed.snapshot([symbol], market_session=session, now=now)
+        else:
+            rows = feed.cached([symbol])
+        previous_market_timestamp = st.session_state.get("realtime_quote_timestamp")
+        current_market_timestamp = market_quote_timestamp(rows, feed.last_quote_timestamp)
+        display_status = quote_status_display(
+            ctx["status"], current_timestamp=current_market_timestamp,
+            previous_timestamp=previous_market_timestamp, now=beijing_now(),
+            market_session_value=session, feed=feed)
+        ctx["status"].update(display_status)
+        if current_market_timestamp is not None:
+            st.session_state.realtime_quote_timestamp = current_market_timestamp
+        st.session_state.realtime_quote_status = display_status["quote_status"]
+        st.session_state.realtime_market_session = session
+        st.session_state.realtime_last_quote_time = display_status["last_quote_time"]
+        slots = ctx.get("status_slots", {})
+        if slots.get("topbar") is not None:
+            render_topbar_status(slots["topbar"], ctx["status"])
+        if slots.get("status_strip") is not None:
+            render_status_strip(ctx["status"], target=slots["status_strip"])
         if rows:
             consumer = st.session_state.setdefault(f"stock_snapshot_consumer_{symbol}", SnapshotConsumerState())
             row = consumer.consume(rows)[0]
-            previous_timestamp = st.session_state.get(f"quote_timestamp_{symbol}")
-            st.session_state[f"quote_timestamp_{symbol}"] = row["quote_timestamp"]
-            st.session_state.realtime_live_state = (live_state(previous_timestamp, row["quote_timestamp"])
-                                                     if market_open else "CLOSED")
+            quote_time = row.get("quote_time", "unavailable")
             quote = {**initial_quote, **row, "timestamp": row["quote_time"]}
-            render_stock_header(symbol, quote, name, ctx["status"]["market"])
+            render_stock_header(symbol, quote, name, display_status["market"])
             cols = st.columns(3)
             cols[0].metric("1分钟涨速", "--" if row["speed_1m"] == "unavailable" else f"{row['speed_1m']:.2f}%")
             cols[1].metric("3分钟涨速", "--" if row["speed_3m"] == "unavailable" else f"{row['speed_3m']:.2f}%")
             cols[2].metric("5分钟涨速", "--" if row["speed_5m"] == "unavailable" else f"{row['speed_5m']:.2f}%")
         else:
-            render_stock_header(symbol, initial_quote, name, ctx["status"]["market"])
+            render_stock_header(symbol, initial_quote, name, display_status["market"])
 
     quote_fragment()
 
@@ -58,6 +85,15 @@ def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
     render_ai_states(ctx["workforce"].router.role_states,
                      {**result["employees"], "chief_researcher": result["chief_researcher"]})
     return result
+
+
+def _research_facts(ctx: dict, symbol: str) -> dict:
+    facts = build_fact_bundle(symbol, provider=ctx["provider"], scanner=ctx["scanner"])
+    # Current market state is UI context, not inferred from a closing tick time.
+    session = ctx["status"].get("market_session", current_market_session(beijing_now()))
+    return {**facts, "market_status": session,
+            "quote_type": "realtime_snapshot" if should_fetch_quotes(session) else "latest_available_snapshot",
+            "source": ctx["status"].get("provider", facts.get("source"))}
 
 
 def _recent_records(symbol: str) -> list[dict]:
@@ -136,6 +172,8 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
         render_technical_panel(snapshot.facts)
 
     st.subheader("AI研究")
+    st.caption(f"市场状态：{ctx['status'].get('market', '--')}｜行情时间：{snapshot.quote.get('timestamp', '--')}"
+               "｜使用最近有效行情与历史数据")
     selected_mode = st.segmented_control("AI研究模式", ["标准", "深度", "MAX"],
                                          default=analysis_mode_display(mode) if mode in ANALYSIS_MODE_LABELS else "标准",
                                          label_visibility="collapsed") or "标准"
@@ -144,7 +182,7 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
     st.caption(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确记录数据缺口。")
     if st.button("开始AI研究", type="primary"):
         try:
-            facts = build_fact_bundle(symbol, provider=ctx["provider"], scanner=ctx["scanner"])
+            facts = _research_facts(ctx, symbol)
             result = _run_research(ctx, symbol, ai_mode, facts)
             st.session_state.last_research = result
             st.session_state.setdefault("research_history", []).insert(0, result)

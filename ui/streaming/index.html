@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A-Agent 实时行情 Beta</title><link rel="stylesheet" href="stream.css"></head>
+<body><header><strong>实时行情 <small>Beta</small></strong><span id="connection">连接中</span>
+<button id="reconnect" type="button">重新连接</button></header>
+<div id="status" role="status"><span id="market">--</span>　行情：<b id="quote-status">UNAVAILABLE</b>　市场行情时间：<span id="market-time">--</span></div>
+<section><h2>600498.SH <span id="symbol-name"></span></h2><div id="hero" class="metrics"></div></section>
+<section><h2>实时强势榜 <small>涨幅 Top20</small></h2><div class="table-wrap">
+<div class="rank-head"><span>排名</span><span>代码</span><span>名称</span><span>最新价</span><span>涨跌幅</span><span>1m</span><span>3m</span><span>5m</span><span>成交额</span></div>
+<div id="ranking"></div><p id="empty">等待真实行情，无有效数据时不展示价格。</p></div></section>
+<footer id="diagnostics">等待共享快照</footer><script type="module" src="stream.js"></script></body></html>

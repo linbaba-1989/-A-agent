@@ -19,6 +19,9 @@ def _range(container, label, prefix, suffix=""):
 
 def render(ctx: dict) -> None:
     st.title("全A扫描")
+    if ctx["status"].get("market_session") == "closed":
+        st.info("盘后模式 / 使用最近有效收盘快照")
+        st.caption("涨速使用最后有效值；没有可靠历史时显示 --。技术指标与筛选条件仍可使用。")
     with st.container(border=True):
         first = st.columns(3)
         price_min, price_max = _range(first[0], "价格", "price")
@@ -50,7 +53,8 @@ def render(ctx: dict) -> None:
         start = actions[1].button("开始扫描", type="primary", disabled=not ctx["available"], width="stretch")
         if reset:
             for key in tuple(st.session_state):
-                if key not in ("selected_symbol", "scan_rows", "research_history"):
+                if key not in ("selected_symbol", "scan_rows", "research_history",
+                               "market_source", "acceptance_mode", "acceptance_source"):
                     del st.session_state[key]
             st.rerun()
 
@@ -68,6 +72,9 @@ def render(ctx: dict) -> None:
                "speed_1m": speed[1], "speed_3m": speed[3], "speed_5m": speed[5],
                "recent_high": recent_high, "ma_breakout": ma_breakout,
                **{f"above_ma{window}": enabled for window, enabled in above.items()}}
+    if ctx.get("scanner") is None:
+        st.info("请在设置中连接行情源后运行扫描；收盘不限制扫描功能。")
+        return
     history = ctx["scanner"].history_service.info()
     technical_filter_requested = recent_high or ma_breakout or any(above.values())
     if technical_filter_requested and history.status in {"not_started", "initializing", "failed"}:
