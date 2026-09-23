@@ -9,6 +9,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from .model_registry import ProviderConfig
+from .provider_output_limits import output_limit_kwargs
 
 
 class OpenAICompatibleAdapter:
@@ -23,7 +24,24 @@ class OpenAICompatibleAdapter:
                                   timeout=self.config.timeout, max_retries=0)
         return self._client
 
-    def chat_completion(self, **kwargs: Any) -> Any:
+    @staticmethod
+    def output_budget(config: ProviderConfig, max_output_tokens: int) -> dict[str, int]:
+        return output_limit_kwargs(config, max_output_tokens)
+
+    def chat_completion(self, *, max_output_tokens: int | None = None, **kwargs: Any) -> Any:
+        if "max_tokens" in kwargs and "max_completion_tokens" in kwargs:
+            raise ValueError("conflicting_output_limits")
+        cap_fields = {"max_tokens", "max_completion_tokens", "max_output_tokens"}
+        if max_output_tokens is not None or cap_fields.intersection(kwargs):
+            extra = kwargs.get("extra_body") or {}
+            if cap_fields.union({"model"}).intersection(extra):
+                raise ValueError("output_contract_override_in_extra_body")
+            if kwargs.get("model") != self.config.model_name:
+                raise ValueError("output_contract_model_mismatch")
+        if max_output_tokens is not None:
+            if any(key in kwargs for key in ("max_tokens", "max_completion_tokens")):
+                raise ValueError("conflicting_output_limits")
+            kwargs.update(self.output_budget(self.config, max_output_tokens))
         return self.client.chat.completions.create(**kwargs)
 
     def structured_completion(self, schema: Type[BaseModel], **kwargs: Any) -> Any:

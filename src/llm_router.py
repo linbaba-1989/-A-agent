@@ -130,7 +130,12 @@ class LLMRouter:
         return [*messages, {"role": "system", "content": instruction}]
 
     def _request(self, provider: ProviderConfig, messages: list[dict[str, str]],
-                 reasoning_effort: str | None = None, schema: Type[BaseModel] | None = None) -> Any:
+                 reasoning_effort: str | None = None, schema: Type[BaseModel] | None = None,
+                 *, max_output_tokens: int | None = None) -> Any:
+        # No cap is added to production calls unless explicitly requested.
+        from .provider_adapters import OpenAICompatibleAdapter
+        budget = (OpenAICompatibleAdapter.output_budget(provider, max_output_tokens)
+                  if max_output_tokens is not None else {})
         client = self.client_factory(provider)
         response_format: dict[str, Any] = {"type": "json_object"}
         if schema is not None and provider.supports_json_schema:
@@ -148,6 +153,7 @@ class LLMRouter:
             kwargs["reasoning_effort"] = reasoning_effort
             if provider.reasoning_mode == "deepseek":
                 kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
+        kwargs.update(budget)
         if hasattr(client, "chat_completion"):
             return client.chat_completion(**kwargs)
         return client.chat.completions.create(**kwargs)

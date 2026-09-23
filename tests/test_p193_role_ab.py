@@ -73,18 +73,20 @@ def _mock_registry(monkeypatch, configured=True):
         env_name = f"P193_{name.upper()}_KEY"
         if configured:
             monkeypatch.setenv(env_name, "test-key")
-        providers[name] = ProviderConfig(name, model, None, env_name)
+        bases = {"deepseek": "https://api.deepseek.com", "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                 "doubao": "https://ark.cn-beijing.volces.com/api/v3", "kimi": "https://api.moonshot.cn/v1"}
+        providers[name] = ProviderConfig(name, model, bases[name], env_name)
     return ModelRegistry(providers)
 
 
-def test_dry_run_is_exactly_ten_calls_and_provider_counts():
+def test_dry_run_is_exactly_six_calls_and_provider_counts():
     runner = RoleIsolatedRunner()
     result = runner.run_round1(dry_run=True)
     summary = result["summary"]
-    assert summary["planned_base_calls"] == 10
-    assert summary["max_provider_attempts"] == 10
+    assert summary["planned_base_calls"] == 6
+    assert summary["max_provider_attempts"] == 6
     assert summary["actual_provider_calls"] == 0
-    assert summary["provider_counts"] == {"deepseek": 4, "qwen": 2, "doubao": 2, "kimi": 2}
+    assert summary["provider_counts"] == {"deepseek": 2, "qwen": 2, "kimi": 2}
     assert summary["fallback_calls"] == summary["repair_calls"] == summary["judge_model_calls"] == 0
     assert "few_shot_enabled" not in json.dumps(result["plan"], ensure_ascii=False)
     for row in summary["results"]:
@@ -98,12 +100,12 @@ def test_dry_run_is_exactly_ten_calls_and_provider_counts():
 
 def test_budget_is_recomputed_from_final_role_prompts():
     budget = RoleIsolatedRunner().estimate_round1_budget()
-    assert budget["planned_base_calls"] == 10
-    assert budget["max_provider_attempts"] == 10
+    assert budget["planned_base_calls"] == 6
+    assert budget["max_provider_attempts"] == 6
     assert budget["off_input_tokens"] > 0
     assert budget["on_input_tokens"] > budget["off_input_tokens"]
     assert budget["few_shot_extra_tokens"] == budget["on_input_tokens"] - budget["off_input_tokens"]
-    assert budget["output_tokens"] == 2 * (200 + 120 + 130 + 170 + 550)
+    assert budget["output_tokens"] == 2 * (4096 + 3072 + 4096)
     assert budget["cost_status"] in ("unknown", "estimated")
     assert budget["chief_bundle_hash"] == load_synthetic_specialist_bundle()["bundle_hash"]
 
@@ -254,7 +256,7 @@ def test_standalone_preflight_runs_from_another_cwd(tmp_path):
     report = json.loads(process.stdout)
     assert set(report) == {"deepseek", "qwen", "doubao", "kimi"}
     assert all(set(row) == {"key", "model", "endpoint", "mapping", "adapter",
-                            "prompt", "schema", "readiness"} for row in report.values())
+                            "prompt", "schema", "readiness", "output_limit"} for row in report.values())
 
 
 def test_eval_and_production_resolve_the_same_primary_mapping():

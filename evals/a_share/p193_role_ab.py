@@ -36,6 +36,8 @@ from src.llm_router import LLMRouter, load_role_config
 from src.model_arena import stable_fact_bundle_hash
 from src.model_registry import ModelRegistry, ProviderConfig
 from src.provider_adapters import ADAPTERS, OpenAICompatibleAdapter
+from src.provider_output_limits import output_limit_status
+from evals.a_share.runtime_guardrails import OUTPUT_CAPS, diagnostics, now, timeout_phase, usage_accounting
 from src.usage_tracker import UsageRecord, UsageTracker, timestamp_now
 
 
@@ -58,6 +60,11 @@ ROUND1_PAIRS = (
     ("GC03", "sentiment_analyst"),
     ("GC05", "risk_officer"),
     ("GC05", "chief_researcher"),
+)
+NEXT_VALIDATION_PAIRS = (
+    ("GC01", "technical_analyst"),
+    ("GC04", "fundamental_event_analyst"),
+    ("GC05", "risk_officer"),
 )
 OUTPUT_TOKEN_ESTIMATES = {
     "technical_analyst": 200,
@@ -137,7 +144,7 @@ def build_blind_plan(evaluation_run_id: str, role_config: dict[str, Any] | None 
     seed = sha256(f"p193a:{evaluation_run_id}".encode("utf-8")).hexdigest()
     tasks: list[dict[str, Any]] = []
     mapping: dict[str, bool] = {}
-    for case_id, role in ROUND1_PAIRS:
+    for case_id, role in NEXT_VALIDATION_PAIRS:
         fixture = load_fixture(case_id)
         route = config[role]
         candidate = dict(route["candidates"][0]) if "candidates" in route else {"provider": route["primary"]}
@@ -145,6 +152,10 @@ def build_blind_plan(evaluation_run_id: str, role_config: dict[str, Any] | None 
         model = candidate.get("model") or model_registry.get(provider).model_name
         if candidate.get("model_env"):
             model = os.getenv(candidate["model_env"]) or model_registry.get(provider).model_name
+        resolved = model_registry.for_model(provider, model)
+        cap_status = output_limit_status(resolved)
+        if cap_status["status"] != "VERIFIED":
+            raise ValueError("validation_contract_unverified:" + provider + ":" + cap_status["reason"])
         order_digest = sha256(f"{seed}:{case_id}:{role}".encode("utf-8")).digest()
         enabled_order = (False, True) if order_digest[0] % 2 == 0 else (True, False)
         for sequence, enabled in enumerate(enabled_order):
@@ -296,7 +307,7 @@ class RoleIsolatedRunner:
         provider = self.registry.for_model(candidate["provider"], candidate.get("model"))
         return candidate, provider
 
-    def provider_readiness(self) -> dict[str, dict[str, str]]:
+    def provider_readiness(self) -> dict[str, dict[str, Any]]:
         """Inspect configuration and construct adapters without requests or secrets."""
         expected = {
             "deepseek": ("technical_analyst", "chief_researcher"),
@@ -337,11 +348,14 @@ class RoleIsolatedRunner:
             ready = (key_status == "configured" and model_status == "configured" and
                      endpoint_status == "configured" and mapping_status == "configured" and
                      adapter_status == prompt_status == schema_status == "ready")
+            cap_status = output_limit_status(provider) if adapter_status == "ready" else {"status": "UNSUPPORTED", "parameter": None, "reasoning_accounting": "unknown"}
             results[provider_name] = {
                 "key": key_status, "model": model_status, "endpoint": endpoint_status,
                 "mapping": mapping_status, "adapter": adapter_status,
                 "prompt": prompt_status, "schema": schema_status,
-                "readiness": "READY" if ready else "BLOCKED_CONFIG",
+                "output_limit": cap_status,
+                "readiness": ("UNSUPPORTED" if ready and cap_status["status"] != "VERIFIED" else
+                              "VERIFIED" if ready else "BLOCKED_CONFIG"),
             }
         return results
 
@@ -379,6 +393,7 @@ class RoleIsolatedRunner:
                 "chief_bundle_hash": bundle_hash,
                 "prompt_hash": canonical_hash(constrained),
                 "few_shot_enabled": few_shot_enabled,
+                "max_output_tokens": OUTPUT_CAPS[role], "output_limit": output_limit_status(provider),
                 "few_shot_token_estimate": audit.get("estimated_few_shot_tokens", 0),
                 "selected_case_ids": list(audit.get("selected_case_ids", [])),
                 "retrieval_scores": list(audit.get("retrieval_scores", []))}
@@ -400,53 +415,63 @@ class RoleIsolatedRunner:
             "few_shot_token_estimate": prepared["few_shot_token_estimate"],
             "prompt_hash": prepared["prompt_hash"], "fact_bundle_hash": prepared["fact_bundle_hash"],
             "chief_bundle_hash": prepared["chief_bundle_hash"],
-            "fallback_used": False, "repair_used": False, "provider_attempts": 1,
+            "fallback_used": False, "repair_used": False, "provider_attempts": 0,
             "schema_valid": None, "status": "PLANNED", "input_tokens": None,
             "output_tokens": None, "total_tokens": None, "latency": None,
             "estimated_cost": None, "cost_status": "unknown", "parsed_response": None,
-            "raw_response": None, "metrics": None,
+            "raw_response": None, "metrics": None, "finish_reason": None,
         }
+        base.update(usage_accounting(None))
+        base.update({"runtime_diagnostics": diagnostics(provider, role, OUTPUT_CAPS[role]),
+                     "max_output_tokens": OUTPUT_CAPS[role], "output_limit": prepared["output_limit"]})
         if dry_run:
             return base
         if not provider.configured:
             return {**base, "status": "PROVIDER_ERROR", "error": "provider_not_configured"}
+        if prepared["output_limit"]["status"] != "VERIFIED":
+            return {**base, "status": "UNSUPPORTED", "error": "provider_output_limit_unsupported"}
         started = perf_counter()
+        diag = base["runtime_diagnostics"]
+        diag["request_started_at"] = now()
+        base["provider_attempts"] = 1
+        result = dict(base)
         try:
             reasoning = (candidate.get("reasoning") or {}).get("standard")
-            response = self.router._request(provider, prepared["messages"], reasoning, prepared["schema"])
+            response = self.router._request(provider, prepared["messages"], reasoning, prepared["schema"],
+                                            max_output_tokens=OUTPUT_CAPS[role])
+            diag["response_received"] = True
+            diag["request_finished_at"] = now()
+            diag["elapsed_seconds"] = perf_counter() - started
+            result.update(usage_accounting(response))
+            finish = getattr(response.choices[0], "finish_reason", None) if getattr(response, "choices", None) else None
+            result["finish_reason"] = finish if finish in ("stop", "length", "content_filter", "tool_calls", "function_call") else None
             raw = self.router._content(response)
-            input_tokens, output_tokens, total_tokens = self.router._tokens(response)
+            result["raw_response"] = raw
             parsed = prepared["schema"].model_validate_json(raw)
             metrics = evaluate_response(role, parsed.model_dump(), fixture["facts"], prepared["selected_case_ids"])
-            cost, cost_status = self.router._cost(provider, input_tokens, output_tokens)
-            result = {**base, "status": "PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
-                      "schema_valid": metrics["schema_compliance"], "input_tokens": input_tokens,
-                      "output_tokens": output_tokens, "total_tokens": total_tokens,
-                      "latency": perf_counter() - started, "estimated_cost": cost,
-                      "cost_status": cost_status, "parsed_response": parsed.model_dump(),
-                      "raw_response": raw, "metrics": metrics}
-            self.tracker.record(UsageRecord(
-                evaluation_run_id, provider.provider_name, provider.model_name, role,
-                input_tokens, output_tokens, total_tokens, result["latency"], cost,
-                timestamp_now(), True, False, analysis_mode="standard",
-                requested_model=provider.model_name, actual_model=provider.model_name,
-                usage_status="available", schema_repair_count=0, cost_status=cost_status))
-            return result
-        except ValidationError as exc:
-            latency = perf_counter() - started
-            result = {**base, "status": "SCHEMA_FAIL", "schema_valid": False,
-                      "latency": latency, "error": str(exc), "raw_response": locals().get("raw")}
-            self.tracker.record(UsageRecord(
-                evaluation_run_id, provider.provider_name, provider.model_name, role,
-                None, None, None, latency, None, timestamp_now(), False, False,
-                error="SCHEMA_FAIL", analysis_mode="standard", requested_model=provider.model_name,
-                actual_model=provider.model_name, usage_status="unavailable",
-                schema_repair_count=0, cost_status="unknown"))
-            return result
+            result.update(status="PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
+                          schema_valid=metrics["schema_compliance"], parsed_response=parsed.model_dump(), metrics=metrics)
         except Exception as exc:
-            latency = perf_counter() - started
-            return {**base, "status": "PROVIDER_ERROR", "schema_valid": False,
-                    "latency": latency, "error": f"{type(exc).__name__}: {exc}"}
+            diag["exception_type"] = type(exc).__name__
+            diag["timeout_phase"] = timeout_phase(exc)
+            result.update(status="SCHEMA_FAIL" if isinstance(exc, ValidationError) else "PROVIDER_ERROR",
+                          schema_valid=False, error=type(exc).__name__)
+        finally:
+            if diag["request_finished_at"] is None:
+                diag["request_finished_at"] = now()
+                diag["elapsed_seconds"] = perf_counter() - started
+        result["latency"] = diag["elapsed_seconds"]
+        if result["input_tokens"] is not None and result["output_tokens"] is not None:
+            result["estimated_cost"], result["cost_status"] = self.router._cost(
+                provider, result["input_tokens"], result["output_tokens"])
+        self.tracker.record(UsageRecord(
+            evaluation_run_id, provider.provider_name, provider.model_name, role,
+            result["input_tokens"], result["output_tokens"], result["total_tokens"],
+            result["latency"], result["estimated_cost"], timestamp_now(), result["status"] == "PASS", False,
+            error=result.get("error"), analysis_mode="standard", requested_model=provider.model_name,
+            actual_model=provider.model_name, usage_status=result["usage_accounting_status"],
+            schema_repair_count=0, cost_status=result["cost_status"], timeout_stage=diag["timeout_phase"]))
+        return result
 
     def build_plan(self, evaluation_run_id: str) -> BlindPlan:
         return build_blind_plan(evaluation_run_id, self.role_config, self.registry)
@@ -456,7 +481,7 @@ class RoleIsolatedRunner:
         return sum(estimate_tokens(message["content"]) for message in prepared["messages"])
 
     def estimate_round1_budget(self, evaluation_run_id: str = "p193a-round1-smoke") -> dict[str, Any]:
-        """Estimate the final ten-call plan without constructing a network client."""
+        """Estimate the six-call validation plan; unsupported caps block execution."""
         plan = self.build_plan(evaluation_run_id)
         bundle = load_synthetic_specialist_bundle()
         rows: list[dict[str, Any]] = []
@@ -474,8 +499,9 @@ class RoleIsolatedRunner:
                              "provider": task["provider"], "model": task["model"],
                              "off_input_tokens": off_tokens, "on_input_tokens": on_tokens,
                              "few_shot_delta": on_tokens - off_tokens,
-                             "output_tokens_per_arm": OUTPUT_TOKEN_ESTIMATES[role],
-                             "selected_case_ids": on["selected_case_ids"]})
+                             "output_tokens_per_arm": OUTPUT_CAPS[role],
+                             "selected_case_ids": on["selected_case_ids"],
+                             "output_limit": on["output_limit"]})
                 item = providers.setdefault(task["provider"], {
                     "off_input_tokens": 0, "on_input_tokens": 0, "few_shot_delta": 0,
                     "output_tokens": 0, "calls": 0, "model": task["model"],
@@ -483,7 +509,7 @@ class RoleIsolatedRunner:
                 item["off_input_tokens"] += off_tokens
                 item["on_input_tokens"] += on_tokens
                 item["few_shot_delta"] += on_tokens - off_tokens
-                item["output_tokens"] += OUTPUT_TOKEN_ESTIMATES[role] * 2
+                item["output_tokens"] += OUTPUT_CAPS[role] * 2
                 item["calls"] += 2
         for provider_name, item in providers.items():
             provider = self.registry.get(provider_name)
@@ -514,7 +540,8 @@ class RoleIsolatedRunner:
             "chief_bundle_hash": bundle["bundle_hash"],
             "fallback_enabled": False,
             "repair_enabled": False,
-            "judge_model_calls": 0,
+            "judge_model_calls": 0, "retry_calls": 0,
+            "output_budget_status": "requested_caps_not_billed_token_bound",
         }
 
     def run_round1(self, evaluation_run_id: str = "p193a-round1-smoke", *, dry_run: bool = True,
@@ -534,9 +561,9 @@ class RoleIsolatedRunner:
                 synthetic_bundle=chief_bundle, dry_run=dry_run, allow_network=allow_network))
         summary = {"planned_base_calls": len(plan.public_tasks),
                    "max_provider_attempts": sum(item["planned_provider_attempts"] for item in plan.public_tasks),
-                   "actual_provider_calls": 0 if dry_run else len(results),
+                   "actual_provider_calls": sum(item["provider_attempts"] for item in results),
                    "provider_counts": dict(Counter(item["provider"] for item in plan.public_tasks)),
-                   "fallback_calls": 0, "repair_calls": 0, "judge_model_calls": 0,
+                   "fallback_calls": 0, "repair_calls": 0, "judge_model_calls": 0, "retry_calls": 0,
                    "results": results}
         if save_evidence_to is not None and not dry_run:
             save_evidence(save_evidence_to, plan, results)

@@ -1,7 +1,7 @@
 """Role-isolated local case retrieval, disabled by default. No embedding/API calls."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 import math
@@ -11,6 +11,7 @@ from pathlib import Path
 from .agent_schemas import (ChiefReport, FundamentalEventReport, RiskReport,
                             SentimentReport, TechnicalReport, RESEARCH_TIME_HORIZONS)
 from .few_shot_features import MARKET_FIELDS, ROLES, ScenarioFeatures, scenario_features
+from .technical_case_gate import technical_conflict
 
 CASE_FILES = dict(zip(ROLES, ("technical_cases.jsonl", "fundamental_cases.jsonl",
                              "sentiment_cases.jsonl", "risk_cases.jsonl", "chief_cases.jsonl")))
@@ -19,7 +20,7 @@ DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "knowledge" / "cases"
 MIN_SCORE = 6.0
 MAX_CASES = 3
 TOKEN_BUDGET = 1000
-RETRIEVER_VERSION = "p1.9.2-v1"
+RETRIEVER_VERSION = "p1.9.3c-v1"
 WEIGHTS = {role: (4., 1., 2., 4., 2.) for role in ROLES}  # tags/data/trend/conflict/evidence
 WEIGHTS["technical_analyst"] = (5., 1., 3., 4., 1.)
 WEIGHTS["chief_researcher"] = (4., 1., 2., 6., 3.)
@@ -43,6 +44,7 @@ class ResearchCase:
     trend_states: tuple[str, ...] = ()
     signal_conflicts: tuple[str, ...] = ()
     evidence_patterns: tuple[str, ...] = ()
+    technical_context: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -70,7 +72,9 @@ def _case(data: dict, role: str) -> ResearchCase:
             raise ValueError("invalid_case_array")
     if not data.get("scenario_tags") or not (data.get("required_tags") or data.get("required_any")):
         raise ValueError("case_needs_feature_gate")
-    return ResearchCase(**{key: data[key] for key in required}, role=role,
+    if not isinstance(data.get("technical_context", {}), dict):
+        raise ValueError("invalid_technical_context")
+    return ResearchCase(technical_context=data.get("technical_context", {}), **{key: data[key] for key in required}, role=role,
                         **{key: data[key] for key in ("market_context", "facts", "data_requirements")},
                         **{key: tuple(data.get(key, [])) for key in arrays})
 
@@ -89,7 +93,7 @@ def load_library(root: Path = DEFAULT_ROOT) -> CaseLibrary:
         digest.update(name.encode()); digest.update(raw.get(name, b"missing"))
     digest.update(json.dumps(RESEARCH_TIME_HORIZONS, sort_keys=True).encode())
     # The policy/code participates, so a feature or scoring change is auditable too.
-    for code in (Path(__file__), Path(__file__).with_name("few_shot_features.py")):
+    for code in (Path(__file__), Path(__file__).with_name("few_shot_features.py"), Path(__file__).with_name("technical_case_gate.py")):
         digest.update(code.read_bytes())
     cases, errors = {}, {}
     try:
@@ -155,6 +159,12 @@ def score_details(case: ResearchCase, features: ScenarioFeatures) -> tuple[float
     reasons += ["data:" + key + ("=available" if value else "=unavailable") for key, value in sorted(case.data_requirements.items())]
     reasons += ["conflict:" + name for name in conflicts] + ["evidence:" + name for name in evidence]
     if trend_match: reasons.append("trend:" + features.trend_state)
+    if case.role == "technical_analyst":
+        gate = technical_conflict(case, features)
+        reasons += ["critical_feature_conflict:" + reason for reason in gate["reasons"]]
+        if gate["action"] == "hard_exclusion":
+            return 0., reasons
+        score -= gate["penalty"]
     return round(score, 3), reasons
 
 
@@ -188,7 +198,8 @@ def empty_audit(status: str, version: str | None, reason: str) -> dict:
             "selected_case_count": 0, "selected_case_ids": [], "retrieval_scores": [], "scores": [],
             "selection_reason": [reason], "few_shot_chars": 0, "estimated_few_shot_tokens": 0,
             "token_estimator": "cjk_1.5_ascii_0.25", "token_budget": TOKEN_BUDGET,
-            "retriever_version": RETRIEVER_VERSION}
+            "retriever_version": RETRIEVER_VERSION, "technical_conflict_audit": [],
+            "possible_redundant_case": False}
 
 
 def select_cases(library: CaseLibrary, features: ScenarioFeatures, *, k: int | None = None,
@@ -198,8 +209,11 @@ def select_cases(library: CaseLibrary, features: ScenarioFeatures, *, k: int | N
         return "", empty_audit("unavailable", library.version, library.errors.get(role, "role_library_missing"))
     count = min(MAX_CASES, max(0, k if k is not None else (3 if features.conflicts else 2)))
     candidates = []
+    gate_audit = []
     for case in library.cases[role]:
         score, reasons = score_details(case, features)
+        if role == "technical_analyst":
+            gate_audit.append({**technical_conflict(case, features), "score_after_gate": score})
         if score >= max(MIN_SCORE, minimum_score): candidates.append((case, score, reasons))
     selected, pieces, choices, fingerprints = [], [], [], set()
     budget = min(TOKEN_BUDGET, max(0, token_budget))
@@ -223,14 +237,17 @@ def select_cases(library: CaseLibrary, features: ScenarioFeatures, *, k: int | N
         choices.append({"case_id": case.case_id, "score": score, "adjusted_score": effective_score,
                         "matched": reasons})
     if not selected:
-        return "", empty_audit("no_match", library.version, "no_case_above_threshold_within_budget")
+        return "", {**empty_audit("no_match", library.version, "no_case_above_threshold_within_budget"),
+                    "technical_conflict_audit": gate_audit, "possible_redundant_case": False}
     block = HEADER + "\n".join(pieces)
     scores = [choice["score"] for choice in choices]
     return block, {**empty_audit("selected", library.version, "feature_match"),
                    "selected_case_count": len(selected), "selected_case_ids": [p.case_id for p in selected],
                    "retrieval_scores": scores, "scores": scores, "selection_reason": choices,
                    "few_shot_chars": len(block), "estimated_few_shot_tokens": estimate_tokens(block),
-                   "token_budget": budget}
+                   "token_budget": budget, "technical_conflict_audit": gate_audit,
+                   "possible_redundant_case": role == "sentiment_analyst" and any(
+                       "market_data_missing" in p.required_tags for p in selected)}
 
 
 class FewShotRetriever:
