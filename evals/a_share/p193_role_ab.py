@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -66,6 +66,27 @@ NEXT_VALIDATION_PAIRS = (
     ("GC04", "fundamental_event_analyst"),
     ("GC05", "risk_officer"),
 )
+BASELINE_SMOKE_PAIRS = (
+    ("GC01", "technical_analyst"),
+    ("GC04", "fundamental_event_analyst"),
+    ("GC05", "risk_officer"),
+)
+# Native contracts (direct endpoints, not hosted substitutes):
+# https://api-docs.deepseek.com/api/create-chat-completion/
+# https://help.aliyun.com/en/model-studio/qwen-structured-output
+# https://platform.kimi.com/docs/guide/use-json-mode-feature-of-kimi-api
+# https://platform.kimi.com/docs/guide/use-reasoning-effort
+EVAL_NATIVE_CONTRACTS = {
+    "technical_analyst": ("deepseek", "deepseek-v4-pro", 90.0, "json_object"),
+    "fundamental_event_analyst": ("qwen", "qwen3.8-max", 90.0, "json_schema"),
+    "risk_officer": ("kimi", "kimi-k3", 150.0, "json_object"),
+}
+STRUCTURED_OUTPUT_DISCIPLINE = (
+    "STRUCTURED_OUTPUT_DISCIPLINE：只返回符合给定 Schema 的最终 JSON 对象；"
+    "覆盖既有 Schema 字段，不输出 Markdown、代码块、JSON 之外的解释或分析过程。"
+    "每个 summary 保持简洁，evidence 只列必要证据，drivers 与 risks 不重复；"
+    "missing evidence 简短列明缺口，不复述完整 Fact Bundle 或 Few-shot 案例。"
+)
 OUTPUT_TOKEN_ESTIMATES = {
     "technical_analyst": 200,
     "fundamental_event_analyst": 120,
@@ -99,6 +120,68 @@ def _endpoint_status(value: str | None) -> str:
 def canonical_hash(payload: Any) -> str:
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def deterministic_enabled_order(seed: str, case_id: str, role: str) -> tuple[bool, bool]:
+    """Reproducible order with no fixed X assignment for the enabled arm."""
+    digest = sha256(f"{seed}:{case_id}:{role}".encode("utf-8")).digest()
+    return (False, True) if digest[0] % 2 == 0 else (True, False)
+
+
+def baseline_reliability_gate(
+    results: list[dict[str, Any]], manual_fact_review: dict[str, bool] | None = None
+) -> dict[str, Any]:
+    """Require three valid OFF baselines and a factual review before live A/B."""
+    if not results:
+        return {"status": "NOT_RUN", "failures": [],
+                "review_required": [role for _, role in BASELINE_SMOKE_PAIRS]}
+    failures: list[str] = []
+    expected = {(case_id, role) for case_id, role in BASELINE_SMOKE_PAIRS}
+    observed: set[tuple[str, str]] = set()
+    for result in results:
+        case_id = str(result.get("case_id", "")).split("_", 1)[0]
+        role = result.get("role")
+        pair = (case_id, role)
+        if pair not in expected or pair in observed:
+            failures.append("unexpected_or_duplicate_baseline")
+            continue
+        observed.add(pair)
+        fixture = load_fixture(case_id)
+        if result.get("fixture_hash") != fixture["fixture_hash"]:
+            failures.append(f"{role}:fixture_hash_mismatch")
+        if result.get("fact_bundle_hash") != fixture["fact_bundle_hash"]:
+            failures.append(f"{role}:fact_bundle_hash_mismatch")
+        contract = EVAL_NATIVE_CONTRACTS[role]
+        if result.get("provider") != contract[0] or result.get("model") != contract[1]:
+            failures.append(f"{role}:provider_model_mismatch")
+        if (result.get("reasoning_effort") != "low" or
+                result.get("response_format_type") != contract[3] or
+                result.get("runtime_diagnostics", {}).get("timeout_config", {}).get("read") != contract[2] or
+                result.get("max_output_tokens") != OUTPUT_CAPS[role] or
+                result.get("schema_hash") != canonical_hash(ROLE_SCHEMAS_WITH_CHIEF[role].model_json_schema())):
+            failures.append(f"{role}:eval_contract_mismatch")
+        if result.get("few_shot_enabled") is not False:
+            failures.append(f"{role}:baseline_not_off")
+        if (result.get("provider_attempts") != 1 or result.get("fallback_used") is not False or
+                result.get("repair_used") is not False):
+            failures.append(f"{role}:attempt_policy_failed")
+        if (result.get("status") != "PASS" or result.get("schema_valid") is not True or
+                result.get("finish_reason") != "stop"):
+            failures.append(f"{role}:response_or_schema_failed")
+        if not result.get("runtime_diagnostics", {}).get("response_received"):
+            failures.append(f"{role}:no_provider_response")
+        metrics = result.get("metrics") or {}
+        if metrics.get("hallucination_rule_hits") or metrics.get("confidence_cap") is not True:
+            failures.append(f"{role}:fact_or_confidence_rule_failed")
+    if observed != expected:
+        failures.append("incomplete_baseline_set")
+    review_required = [role for _, role in BASELINE_SMOKE_PAIRS
+                       if manual_fact_review is None or manual_fact_review.get(role) is not True]
+    if manual_fact_review is not None and any(manual_fact_review.get(role) is False
+                                              for _, role in BASELINE_SMOKE_PAIRS):
+        failures.append("manual_fact_review_failed")
+    status = "FAIL" if failures else "PENDING_FACT_REVIEW" if review_required else "PASS"
+    return {"status": status, "failures": failures, "review_required": review_required}
 
 
 def load_fixture(case_id: str) -> dict[str, Any]:
@@ -156,8 +239,7 @@ def build_blind_plan(evaluation_run_id: str, role_config: dict[str, Any] | None 
         cap_status = output_limit_status(resolved)
         if cap_status["status"] != "VERIFIED":
             raise ValueError("validation_contract_unverified:" + provider + ":" + cap_status["reason"])
-        order_digest = sha256(f"{seed}:{case_id}:{role}".encode("utf-8")).digest()
-        enabled_order = (False, True) if order_digest[0] % 2 == 0 else (True, False)
+        enabled_order = deterministic_enabled_order(seed, case_id, role)
         for sequence, enabled in enumerate(enabled_order):
             arm = "X" if sequence == 0 else "Y"
             key = f"{case_id}:{role}:{arm}"
@@ -307,6 +389,29 @@ class RoleIsolatedRunner:
         provider = self.registry.for_model(candidate["provider"], candidate.get("model"))
         return candidate, provider
 
+    @staticmethod
+    def _eval_provider(role: str, provider: ProviderConfig) -> ProviderConfig:
+        """Clone only the evaluation request settings; leave the registry untouched."""
+        contract = EVAL_NATIVE_CONTRACTS.get(role)
+        if contract is None:
+            return provider
+        expected_provider, expected_model, timeout, output_mode = contract
+        if (provider.provider_name, provider.model_name) != (expected_provider, expected_model):
+            raise ValueError(f"eval_native_contract_model_mismatch:{role}")
+        return replace(provider, timeout=timeout, supports_reasoning_effort=True,
+                       reasoning_levels=("low",), supports_json_schema=output_mode == "json_schema")
+
+    @staticmethod
+    def _eval_response_format(role: str, schema: type[BaseModel]) -> dict[str, Any] | None:
+        contract = EVAL_NATIVE_CONTRACTS.get(role)
+        if contract is None:
+            return None
+        if contract[3] == "json_schema":
+            # Pydantic remains the sole schema source. Extra fields are already forbidden.
+            return {"type": "json_schema", "json_schema": {
+                "name": schema.__name__, "strict": True, "schema": schema.model_json_schema()}}
+        return {"type": "json_object"}
+
     def provider_readiness(self) -> dict[str, dict[str, Any]]:
         """Inspect configuration and construct adapters without requests or secrets."""
         expected = {
@@ -382,13 +487,20 @@ class RoleIsolatedRunner:
             payload = "FACT DATA（只读）：" + json.dumps(
                 StockResearchAgent._role_facts(role, facts), ensure_ascii=False, default=str)
             bundle_hash = None
-        messages = [{"role": "system", "content": self.prompt_agent._prompt(role, few_text)},
+        messages = [{"role": "system", "content": self.prompt_agent._prompt(role, few_text) +
+                     "\n\n" + STRUCTURED_OUTPUT_DISCIPLINE},
                     {"role": "user", "content": payload if isinstance(payload, str) else
                      json.dumps(payload, ensure_ascii=False, default=str)}]
-        constrained = self.router._schema_messages(messages, self._schema(role))
+        schema = self._schema(role)
+        constrained = self.router._schema_messages(messages, schema)
         candidate, provider = self._candidate(role)
-        return {"role": role, "facts": facts, "messages": constrained, "schema": self._schema(role),
+        provider = self._eval_provider(role, provider)
+        return {"role": role, "facts": facts, "messages": constrained, "schema": schema,
                 "audit": audit, "candidate": candidate, "provider": provider,
+                "reasoning_effort": "low" if role in EVAL_NATIVE_CONTRACTS else
+                                    (candidate.get("reasoning") or {}).get("standard"),
+                "response_format": self._eval_response_format(role, schema),
+                "schema_hash": canonical_hash(schema.model_json_schema()),
                 "fact_bundle_hash": stable_fact_bundle_hash(facts),
                 "chief_bundle_hash": bundle_hash,
                 "prompt_hash": canonical_hash(constrained),
@@ -400,17 +512,23 @@ class RoleIsolatedRunner:
 
     def run_role(self, role: str, fixture: dict[str, Any], *, few_shot_enabled: bool,
                  evaluation_run_id: str, anonymous_arm: str, synthetic_bundle: dict[str, Any] | None = None,
-                 dry_run: bool = True, allow_network: bool = False) -> dict[str, Any]:
+                 dry_run: bool = True, allow_network: bool = False,
+                 baseline_gate_passed: bool = False) -> dict[str, Any]:
         if not dry_run and not allow_network:
             raise PermissionError("live_eval_requires_explicit_allow_network")
+        if not dry_run and few_shot_enabled and not baseline_gate_passed:
+            raise PermissionError("baseline_reliability_gate_not_passed")
         prepared = self.prepare_request(role, fixture, few_shot_enabled, evaluation_run_id, synthetic_bundle)
         provider = prepared["provider"]
-        candidate = prepared["candidate"]
         base = {
             "evaluation_run_id": evaluation_run_id, "case_id": fixture["case_id"],
             "fixture_hash": fixture["fixture_hash"], "role": role,
+            "few_shot_enabled": few_shot_enabled,
             "anonymous_arm": anonymous_arm, "provider": provider.provider_name,
             "model": provider.model_name, "selected_case_ids": prepared["selected_case_ids"],
+            "reasoning_effort": prepared["reasoning_effort"],
+            "response_format_type": (prepared["response_format"] or {}).get("type"),
+            "schema_hash": prepared["schema_hash"],
             "retrieval_scores": prepared["retrieval_scores"],
             "few_shot_token_estimate": prepared["few_shot_token_estimate"],
             "prompt_hash": prepared["prompt_hash"], "fact_bundle_hash": prepared["fact_bundle_hash"],
@@ -436,8 +554,8 @@ class RoleIsolatedRunner:
         base["provider_attempts"] = 1
         result = dict(base)
         try:
-            reasoning = (candidate.get("reasoning") or {}).get("standard")
-            response = self.router._request(provider, prepared["messages"], reasoning, prepared["schema"],
+            response = self.router._request(provider, prepared["messages"],
+                                            prepared["reasoning_effort"], prepared["schema"],
                                             max_output_tokens=OUTPUT_CAPS[role])
             diag["response_received"] = True
             diag["request_finished_at"] = now()
@@ -447,10 +565,13 @@ class RoleIsolatedRunner:
             result["finish_reason"] = finish if finish in ("stop", "length", "content_filter", "tool_calls", "function_call") else None
             raw = self.router._content(response)
             result["raw_response"] = raw
-            parsed = prepared["schema"].model_validate_json(raw)
-            metrics = evaluate_response(role, parsed.model_dump(), fixture["facts"], prepared["selected_case_ids"])
-            result.update(status="PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
-                          schema_valid=metrics["schema_compliance"], parsed_response=parsed.model_dump(), metrics=metrics)
+            if finish == "length":
+                result.update(status="SCHEMA_FAIL", schema_valid=False, error="output_cap_hit")
+            else:
+                parsed = prepared["schema"].model_validate_json(raw)
+                metrics = evaluate_response(role, parsed.model_dump(), fixture["facts"], prepared["selected_case_ids"])
+                result.update(status="PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
+                              schema_valid=metrics["schema_compliance"], parsed_response=parsed.model_dump(), metrics=metrics)
         except Exception as exc:
             diag["exception_type"] = type(exc).__name__
             diag["timeout_phase"] = timeout_phase(exc)
@@ -475,6 +596,52 @@ class RoleIsolatedRunner:
 
     def build_plan(self, evaluation_run_id: str) -> BlindPlan:
         return build_blind_plan(evaluation_run_id, self.role_config, self.registry)
+
+    def build_baseline_smoke_plan(self, evaluation_run_id: str = "p193e-baseline-smoke") -> dict[str, Any]:
+        """Plan three OFF-only requests. This method never calls a provider."""
+        tasks: list[dict[str, Any]] = []
+        for case_id, role in BASELINE_SMOKE_PAIRS:
+            fixture = load_fixture(case_id)
+            prepared = self.prepare_request(role, fixture, False, evaluation_run_id)
+            contract = prepared["output_limit"]
+            if contract["status"] != "VERIFIED":
+                raise ValueError(f"baseline_output_contract_unverified:{role}")
+            provider = prepared["provider"]
+            tasks.append({"case_id": case_id, "fixture_hash": fixture["fixture_hash"],
+                          "fact_bundle_hash": prepared["fact_bundle_hash"], "role": role,
+                          "schema_hash": prepared["schema_hash"],
+                          "few_shot_enabled": False, "provider": provider.provider_name,
+                          "model": provider.model_name, "reasoning_effort": prepared["reasoning_effort"],
+                          "response_format_type": prepared["response_format"]["type"],
+                          "timeout_seconds": provider.timeout,
+                          "output_cap_field": contract["parameter"],
+                          "output_cap": prepared["max_output_tokens"],
+                          "planned_provider_attempts": 1})
+        return {"evaluation_run_id": evaluation_run_id, "gate": "BASELINE_RELIABILITY_GATE",
+                "gate_status": "NOT_RUN", "planned_calls": len(tasks),
+                "max_provider_attempts": len(tasks), "few_shot_off_calls": len(tasks),
+                "few_shot_on_calls": 0,
+                "provider_counts": dict(Counter(task["provider"] for task in tasks)),
+                "fallback_calls": 0, "repair_calls": 0, "retry_calls": 0,
+                "judge_model_calls": 0, "tasks": tasks}
+
+    def run_baseline_smoke(self, evaluation_run_id: str = "p193e-baseline-smoke", *,
+                           dry_run: bool = True, allow_network: bool = False,
+                           manual_fact_review: dict[str, bool] | None = None) -> dict[str, Any]:
+        """OFF-only role smoke; live execution requires a separate explicit opt-in."""
+        if not dry_run and not allow_network:
+            raise PermissionError("live_eval_requires_explicit_allow_network")
+        plan = self.build_baseline_smoke_plan(evaluation_run_id)
+        results = [self.run_role(task["role"], load_fixture(task["case_id"]),
+                                 few_shot_enabled=False, evaluation_run_id=evaluation_run_id,
+                                 anonymous_arm="OFF", dry_run=dry_run, allow_network=allow_network)
+                   for task in plan["tasks"]]
+        attempts = sum(result["provider_attempts"] for result in results)
+        if attempts > plan["max_provider_attempts"]:
+            raise AssertionError("baseline_max_provider_attempts_exceeded")
+        return {"plan": plan, "actual_provider_attempts": attempts,
+                "gate": baseline_reliability_gate(results, manual_fact_review) if not dry_run else
+                        baseline_reliability_gate([]), "results": results}
 
     @staticmethod
     def _estimated_input_tokens(prepared: dict[str, Any]) -> int:
@@ -545,7 +712,12 @@ class RoleIsolatedRunner:
         }
 
     def run_round1(self, evaluation_run_id: str = "p193a-round1-smoke", *, dry_run: bool = True,
-                   allow_network: bool = False, save_evidence_to: Path | None = None) -> dict[str, Any]:
+                   allow_network: bool = False, save_evidence_to: Path | None = None,
+                   baseline_results: list[dict[str, Any]] | None = None,
+                   manual_fact_review: dict[str, bool] | None = None) -> dict[str, Any]:
+        if not dry_run and baseline_reliability_gate(
+                baseline_results or [], manual_fact_review)["status"] != "PASS":
+            raise PermissionError("baseline_reliability_gate_not_passed")
         plan = self.build_plan(evaluation_run_id)
         bundle = load_synthetic_specialist_bundle()
         results = []
@@ -558,13 +730,14 @@ class RoleIsolatedRunner:
             results.append(self.run_role(
                 task["role"], fixture, few_shot_enabled=enabled,
                 evaluation_run_id=evaluation_run_id, anonymous_arm=task["anonymous_arm"],
-                synthetic_bundle=chief_bundle, dry_run=dry_run, allow_network=allow_network))
+                synthetic_bundle=chief_bundle, dry_run=dry_run, allow_network=allow_network,
+                baseline_gate_passed=not dry_run))
         summary = {"planned_base_calls": len(plan.public_tasks),
                    "max_provider_attempts": sum(item["planned_provider_attempts"] for item in plan.public_tasks),
                    "actual_provider_calls": sum(item["provider_attempts"] for item in results),
                    "provider_counts": dict(Counter(item["provider"] for item in plan.public_tasks)),
                    "fallback_calls": 0, "repair_calls": 0, "judge_model_calls": 0, "retry_calls": 0,
-                   "results": results}
+                   "results": [public_evidence_record(result) for result in results]}
         if save_evidence_to is not None and not dry_run:
             save_evidence(save_evidence_to, plan, results)
         return {"plan": plan.public_dict(), "summary": summary}
@@ -588,17 +761,14 @@ def save_evidence(directory: Path, plan: BlindPlan, results: list[dict[str, Any]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Offline role-isolated A/B planning")
+    parser = argparse.ArgumentParser(description="Offline role-isolated baseline planning")
     parser.add_argument("--preflight", action="store_true", help="print sanitized local readiness only")
     args = parser.parse_args()
     runner = RoleIsolatedRunner()
     if args.preflight:
         print(json.dumps(runner.provider_readiness(), ensure_ascii=False, indent=2))
         return
-    result = runner.run_round1(dry_run=True)
-    print(json.dumps({"plan": result["plan"], "summary": {
-        key: value for key, value in result["summary"].items() if key != "results"
-    }, "budget": runner.estimate_round1_budget()}, ensure_ascii=False, indent=2))
+    print(json.dumps(runner.build_baseline_smoke_plan(), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

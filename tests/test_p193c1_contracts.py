@@ -46,7 +46,7 @@ def test_official_contract_full_harness_to_sdk_json(name,url,model,role,gc,field
     clients = []
     def factory(provider):
         sdk=OpenAI(api_key=sentinel,base_url=provider.base_url,max_retries=0,
-            http_client=httpx2.Client(transport=httpx2.MockTransport(respond)),timeout=90)
+            http_client=httpx2.Client(transport=httpx2.MockTransport(respond)),timeout=provider.timeout)
         clients.append(sdk)
         return OpenAICompatibleAdapter(provider,client=sdk)
     runner=RoleIsolatedRunner(registry=registry,client_factory=factory,tracker=UsageTracker(tmp_path/'usage.jsonl'))
@@ -56,7 +56,7 @@ def test_official_contract_full_harness_to_sdk_json(name,url,model,role,gc,field
     assert bodies[0][field]==cap
     assert set(bodies[0]) & {"max_tokens","max_completion_tokens","max_output_tokens"} == {field}
     assert result["reasoning_tokens"]==22 and result["visible_output_tokens"] is None
-    assert result["runtime_diagnostics"]["timeout_config"]["read"]==90
+    assert result["runtime_diagnostics"]["timeout_config"]["read"]==(150 if name=="kimi" else 90)
     assert sentinel not in json.dumps(result)+(tmp_path/'usage.jsonl').read_text()
     # Production request without explicit cap remains unchanged.
     runner.router._request(runner._candidate(role)[1],[])
