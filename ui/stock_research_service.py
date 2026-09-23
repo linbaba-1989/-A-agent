@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 
 from src.indicators import UNAVAILABLE, percent_change
-from src.market_cache import (daily_suspend_flag, history_indicators, realtime_ma,
+from src.market_cache import (daily_suspend_flag, history_indicators, normalize_instrument, realtime_ma,
                               security_status, validated_turnover)
 
 
@@ -101,7 +101,9 @@ class StockResearchService:
         tick = ticks.get(symbol)
         if not tick or not self.provider._valid_tick(tick):
             raise LookupError("quote_unavailable")
-        detail = self.provider.normalized_instrument(symbol)
+        normalizer = getattr(self.provider, "normalized_instrument", None)
+        detail = (normalizer(symbol) if callable(normalizer)
+                  else normalize_instrument(symbol, self.provider.get_instrument_detail(symbol)))
         timestamp = self.provider.tick_timestamp(tick)
         as_of = datetime.fromtimestamp(timestamp) if timestamp else None
         history_service = getattr(self.scanner, "history_service", None)

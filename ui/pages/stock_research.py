@@ -1,10 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
+import os
+from pathlib import Path
 import time
 
 import streamlit as st
 
 from src.workforce_acceptance import build_fact_bundle
-from ui.components.ai_progress import render_ai_states
+from src.agent import StockResearchAgent
+from src.few_shot import FewShotRetriever
+from ui.components.ai_progress import render_ai_states, render_case_preview
 from ui.components.ai_report import render_ai_report
 from ui.components.kline_chart import render_kline
 from ui.components.stock_header import render_stock_header
@@ -17,7 +22,41 @@ from ui.view_models import (ANALYSIS_MODE_LABELS, FUNDAMENTAL_GAP_MESSAGE, analy
 from src.market_clock import (DEFAULT_TRADING_CALENDAR, OPEN, beijing_now,
                               market_session as current_market_session, should_fetch_quotes)
 from src.realtime_market import SnapshotConsumerState, market_quote_timestamp, refresh_interval_seconds
-from ui.research_view import configured_models
+from ui.few_shot_preview import case_details_for_audit, preview_cases
+from ui.research_view import ROLES, chief_summary, configured_models
+
+
+EXAMPLE_REPORT_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "research_report_preview.json"
+
+
+def load_example_report() -> dict:
+    """Load a static UI sample. It never touches the router or market provider."""
+    return json.loads(EXAMPLE_REPORT_PATH.read_text(encoding="utf-8"))
+
+
+def _default_case_enhancement(ctx: dict) -> bool:
+    retriever = getattr(ctx.get("workforce"), "few_shot", None)
+    return bool(retriever.enabled) if retriever is not None else os.getenv("A_SHARE_FEW_SHOT_ENABLED", "0") == "1"
+
+
+def _result_case_enhancement(result: dict) -> bool | None:
+    if "few_shot_requested" in result:
+        return bool(result["few_shot_requested"])
+    statuses = {row.get("few_shot_status") for row in (result.get("few_shot_audit") or {}).values()
+                if isinstance(row, dict)}
+    if not statuses:
+        return None
+    return any(status != "disabled" for status in statuses)
+
+
+def _workspace_data_facts(snapshot) -> dict | None:
+    if snapshot is None:
+        return None
+    facts = dict(snapshot.facts)
+    history = getattr(snapshot, "history", None)
+    if "recent_daily_k" not in facts and history is not None and not history.empty:
+        facts["recent_daily_k"] = history.tail(20).to_dict(orient="records")
+    return facts
 
 
 def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -> None:
@@ -72,16 +111,24 @@ def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -
 def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
     placeholder = st.empty()
     started = time.perf_counter()
+    # The selection belongs to this run. The cached application agent retains
+    # its configured default and can serve another session independently.
+    enabled = bool(ctx.get("few_shot_run_enabled", _default_case_enhancement(ctx)))
+    shared = ctx["workforce"]
+    worker = StockResearchAgent(router=shared.router, prompt_dir=getattr(shared, "prompt_dir", None),
+                                few_shot_retriever=FewShotRetriever(enabled=enabled))
     with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(ctx["workforce"].analyze, symbol, facts, mode)
+        future = pool.submit(worker.analyze, symbol, facts, mode)
         while not future.done():
             with placeholder.container():
                 st.warning("AI研究正在运行，请勿重复提交")
-                render_ai_states(ctx["workforce"].router.role_states)
+                render_ai_states(worker.router.role_states, facts=facts, models=configured_models(ctx),
+                                 few_shot_enabled=enabled, few_shot_audit=worker._few_shot_audit)
             time.sleep(.5)
         result = future.result()
     result["elapsed_seconds"] = time.perf_counter() - started
     result["created_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    result["few_shot_requested"] = enabled
     placeholder.empty()
     return result
 
@@ -109,9 +156,8 @@ def _render_records(symbol: str) -> None:
     for result in records:
         chief = result.get("chief_researcher", {})
         data = chief.get("data") or {}
-        bull, bear = len(data.get("bull_case", [])), len(data.get("bear_case", []))
         rows.append({"时间": result.get("created_at", "--"), "模式": analysis_mode_display(result.get("analysis_mode")),
-                     "观点": "偏多" if bull > bear else "偏空" if bear > bull else "中性",
+                     "观点": chief_summary(result)["stance"] or "--",
                      "置信度": data.get("confidence", "--"),
                      "耗时": f"{result.get('elapsed_seconds', 0):.2f}s" if result.get("elapsed_seconds") else "--",
                      "状态": "完成" if chief.get("success") else "失败"})
@@ -122,23 +168,111 @@ def _render_records(symbol: str) -> None:
         render_ai_report(records[selected])
 
 
+def _render_ai_workspace(ctx: dict, symbol: str, mode: str, snapshot=None) -> None:
+    st.subheader("AI研究")
+    if snapshot is None:
+        st.caption("当前行情不可用；案例匹配需要当前 Fact Bundle，静态报告示例仍可查看。")
+    else:
+        st.caption(f"市场状态：{ctx['status'].get('market', '--')}｜行情时间：{snapshot.quote.get('timestamp', '--')}"
+                   "｜使用最近有效行情与历史数据")
+    selected_mode = st.segmented_control("AI研究模式", ["标准", "深度", "MAX"],
+                                         default=analysis_mode_display(mode) if mode in ANALYSIS_MODE_LABELS else "标准",
+                                         label_visibility="collapsed") or "标准"
+    ai_mode = analysis_mode_value(selected_mode)
+
+    if st.session_state.pop("ai_case_enhancement_reset_pending", False):
+        st.session_state["ai_case_enhancement_enabled"] = _default_case_enhancement(ctx)
+    if "ai_case_enhancement_enabled" not in st.session_state:
+        st.session_state["ai_case_enhancement_enabled"] = _default_case_enhancement(ctx)
+    case_enabled = st.toggle("AI增强案例", key="ai_case_enhancement_enabled")
+    st.caption(f"当前研究：{'开启' if case_enabled else '关闭'}")
+    if case_enabled:
+        st.caption("将根据当前股票场景，为每个AI员工动态选择最多2～3个A股案例。")
+
+    controls = st.columns([1.1, 1.1, 1.5, 4], gap="small")
+    with controls[0]:
+        start_clicked = st.button("开始AI研究", type="primary", disabled=snapshot is None,
+                                  width="stretch")
+    with controls[1]:
+        preview_clicked = st.button("预览案例匹配", disabled=snapshot is None, width="stretch")
+    with controls[2]:
+        example_clicked = st.button("预览新版研究报告", width="stretch")
+
+    if preview_clicked:
+        try:
+            facts = _research_facts(ctx, symbol)
+            st.session_state["ai_case_preview"] = {
+                "symbol": symbol, "quote_time": facts.get("quote_time"),
+                "roles": preview_cases(facts),
+            }
+        except Exception as exc:
+            message, detail = safe_error(str(exc))
+            st.error("案例预览失败：" + message)
+            if detail:
+                with st.expander("查看详细错误"):
+                    st.code(detail)
+    if start_clicked:
+        try:
+            facts = _research_facts(ctx, symbol)
+            run_ctx = {**ctx, "few_shot_run_enabled": case_enabled}
+            result = _run_research(run_ctx, symbol, ai_mode, facts)
+            result.setdefault("few_shot_requested", case_enabled)
+            st.session_state.last_research = result
+            st.session_state.setdefault("research_history", []).insert(0, result)
+            st.session_state["ai_case_enhancement_reset_pending"] = True
+        except Exception as exc:
+            message, detail = safe_error(str(exc))
+            st.error("AI研究失败")
+            with st.expander("查看详细错误"):
+                st.code(detail or message)
+    if example_clicked:
+        st.session_state["show_research_example"] = not st.session_state.get("show_research_example", False)
+
+    latest = next(iter(_recent_records(symbol)), None)
+    if latest:
+        audit = latest.get("few_shot_audit") or {}
+        render_ai_states({role: "idle" for role in ROLES},
+                         {**latest.get("employees", {}), "chief_researcher": latest.get("chief_researcher", {})},
+                         facts=latest.get("fact_data", snapshot.facts if snapshot else None),
+                         models=configured_models(ctx), few_shot_enabled=_result_case_enhancement(latest),
+                         few_shot_audit=audit, case_details=case_details_for_audit(audit) if audit else None)
+    else:
+        render_ai_states({role: "idle" for role in ROLES},
+                         facts=_workspace_data_facts(snapshot),
+                         models=configured_models(ctx), few_shot_enabled=case_enabled)
+    st.caption(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确记录数据缺口。")
+
+    preview = st.session_state.get("ai_case_preview") or {}
+    if preview.get("symbol") == symbol:
+        st.caption(f"匹配依据：{preview.get('quote_time') or '--'} 的 Fact Bundle")
+        render_case_preview(preview.get("roles") or {})
+    if st.session_state.get("show_research_example"):
+        with st.expander("示例预览 · 新版研究报告", expanded=True):
+            st.info("示例预览｜内置静态报告，仅展示页面结构；不是当前股票的真实研究结果。")
+            render_ai_report(load_example_report())
+    _render_records(symbol)
+
+
 def render(ctx: dict, symbol: str, mode: str) -> None:
     st.title("个股研究")
     symbol = normalize_symbol(symbol or st.session_state.get("selected_symbol", "600498.SH"))
     if not ctx["available"]:
         st.error("行情服务不可用")
+        _render_ai_workspace(ctx, symbol, mode)
         return
     service = StockResearchService(ctx["provider"], ctx["scanner"], ctx["status"])
     try:
         snapshot = service.load(symbol)
     except LookupError:
         st.warning("证券不存在或当前行情源无该证券")
+        _render_ai_workspace(ctx, symbol, mode)
         return
     except Exception as exc:
         message, detail = safe_error(str(exc))
         st.error("当前无有效行情" if "quote" in str(exc).lower() else message)
         if detail:
             with st.expander("查看详细错误"): st.code(detail)
+        _render_ai_workspace(ctx, symbol, mode)
         return
 
     watchlist = st.session_state.setdefault("watchlist", ["600498.SH"])
@@ -170,28 +304,4 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
     with technical:
         render_technical_panel(snapshot.facts)
 
-    st.subheader("AI研究")
-    st.caption(f"市场状态：{ctx['status'].get('market', '--')}｜行情时间：{snapshot.quote.get('timestamp', '--')}"
-               "｜使用最近有效行情与历史数据")
-    selected_mode = st.segmented_control("AI研究模式", ["标准", "深度", "MAX"],
-                                         default=analysis_mode_display(mode) if mode in ANALYSIS_MODE_LABELS else "标准",
-                                         label_visibility="collapsed") or "标准"
-    ai_mode = analysis_mode_value(selected_mode)
-    render_ai_states({role: "idle" for role in ctx["routes"]}, facts=snapshot.facts,
-                     models=configured_models(ctx))
-    st.caption(FUNDAMENTAL_GAP_MESSAGE + "；相关岗位会明确记录数据缺口。")
-    if st.button("开始AI研究", type="primary"):
-        try:
-            facts = _research_facts(ctx, symbol)
-            result = _run_research(ctx, symbol, ai_mode, facts)
-            st.session_state.last_research = result
-            st.session_state.setdefault("research_history", []).insert(0, result)
-        except Exception as exc:
-            message, detail = safe_error(str(exc)); st.error("AI研究失败")
-            with st.expander("查看详细错误"): st.code(detail or message)
-    latest = next(iter(_recent_records(symbol)), None)
-    if latest:
-        render_ai_states(ctx["workforce"].router.role_states,
-                         {**latest.get("employees", {}), "chief_researcher": latest.get("chief_researcher", {})},
-                         facts=latest.get("fact_data", snapshot.facts), models=configured_models(ctx))
-    _render_records(symbol)
+    _render_ai_workspace(ctx, symbol, mode, snapshot)

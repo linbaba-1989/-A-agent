@@ -1,0 +1,139 @@
+{
+  "example_preview": true,
+  "symbol": "示例股票",
+  "analysis_mode": "standard",
+  "created_at": "静态示例",
+  "fact_data": {
+    "last_price": 10.2,
+    "recent_daily_k": [{"close": 10.2}],
+    "ma5": 10.1,
+    "ma10": 10.0,
+    "ma20": 9.8,
+    "ma60": 9.2,
+    "atr14": 0.4,
+    "volume_ratio": 1.3,
+    "turnover_rate": 2.0,
+    "security_status": "normal",
+    "fundamental_data": "unavailable",
+    "event_data": "unavailable",
+    "announcement_data": "unavailable",
+    "news_data": "unavailable",
+    "industry_data": "unavailable",
+    "sentiment_external_data": "unavailable"
+  },
+  "employees": {
+    "technical_analyst": {
+      "success": true,
+      "model": "deepseek-v4-pro",
+      "latency": 8.4,
+      "data": {
+        "trend": "均线维持多头结构",
+        "momentum": "短线动量减弱",
+        "volume_price": "回踩时量能收敛",
+        "moving_average_structure": "价格仍在 MA20 上方",
+        "support": [9.8],
+        "resistance": [10.6],
+        "breakout_status": "未确认突破",
+        "bullish_signals": ["中期均线结构保持"],
+        "bearish_signals": ["短线动量减弱"],
+        "data_gaps": [],
+        "confidence": 62,
+        "summary": "中期结构仍在，短线等待确认。",
+        "short_term_view": "neutral_bearish",
+        "mid_term_view": "neutral_bullish",
+        "trend_state": "strong_up",
+        "evidence_quality": "medium"
+      }
+    },
+    "fundamental_event_analyst": {
+      "success": true,
+      "model": "qwen3.8-max",
+      "latency": 7.2,
+      "data": {
+        "data_status": "unavailable",
+        "confirmed_facts": [],
+        "available_fundamental_data": [],
+        "event_data": [],
+        "missing_data": ["公司公告", "行业新闻"],
+        "possible_implications": [],
+        "confidence": 20,
+        "summary": "基本面与事件资料缺失，无法判断催化剂。",
+        "evidence_quality": "insufficient"
+      }
+    },
+    "sentiment_analyst": {
+      "success": true,
+      "model": "Doubao",
+      "latency": 6.3,
+      "data": {
+        "data_status": "partial",
+        "confirmed_market_signals": ["量比可用"],
+        "momentum_sentiment": "短线分歧",
+        "volume_sentiment": "成交未明显放大",
+        "crowding_risk": "unavailable",
+        "missing_sentiment_data": ["市场宽度", "板块强度"],
+        "confidence": 35,
+        "summary": "仅有部分个股情绪信号。",
+        "evidence_quality": "low"
+      }
+    },
+    "risk_officer": {
+      "success": true,
+      "model": "kimi-k3",
+      "latency": 5.8,
+      "data": {
+        "technical_risks": ["回踩后若放量下破均线，短线结构可能转弱"],
+        "data_quality_risks": ["公告与行业信息缺失"],
+        "positioning_risks": [],
+        "bull_case_challenges": ["价格趋势与短线动量分化"],
+        "invalid_assumptions": [],
+        "missing_information": ["事件资料"],
+        "risk_level": "medium",
+        "confidence": 52,
+        "summary": "风险中等，优先观察趋势失效条件。",
+        "evidence_quality": "medium"
+      }
+    }
+  },
+  "chief_researcher": {
+    "success": true,
+    "model": "deepseek-v4-pro",
+    "latency": 9.1,
+    "data": {
+      "status": "complete",
+      "missing_roles": [],
+      "confirmed_facts": ["中期均线结构保持", "短线动量减弱"],
+      "data_gaps": ["公司公告", "行业新闻", "市场宽度"],
+      "bull_case": ["中期趋势未破坏"],
+      "bear_case": ["短线动量转弱"],
+      "key_catalysts": [],
+      "key_risks": ["波动放大"],
+      "technical_view": "中期偏强，短线回踩",
+      "fundamental_view": "资料缺失",
+      "sentiment_view": "部分信号可用",
+      "risk_view": "中等风险",
+      "points_of_agreement": ["短线需要确认"],
+      "points_of_disagreement": ["短线与中期方向不同"],
+      "confidence": 45,
+      "final_summary": "短线偏弱与中期上行并存，等待量价确认。",
+      "overall_view": "neutral_bearish",
+      "short_term_view": "bearish",
+      "mid_term_view": "neutral_bullish",
+      "trend_state": "strong_up",
+      "risk_level": "medium",
+      "confidence_cap": 65,
+      "evidence_quality": "low",
+      "data_completeness": "partial",
+      "key_drivers": ["中期均线仍保持多头结构", "短线成交收敛"],
+      "key_conflicts": [
+        {"topic": "周期分歧", "description": "短线走弱，但中期趋势尚未破坏", "roles": ["technical_analyst", "risk_officer"]},
+        {"topic": "证据缺口", "description": "技术面偏强，但事件与市场宽度证据不足", "roles": ["technical_analyst", "fundamental_event_analyst", "sentiment_analyst"]}
+      ],
+      "invalidation_conditions": [
+        {"condition": "日线收盘跌破 MA20 且成交明显放大", "timeframe": "日线", "evidence_source": "价格与成交量"}
+      ],
+      "missing_evidence": ["公司公告", "行业新闻", "市场宽度"],
+      "summary": "短线偏弱与中期上行并存，等待量价确认。"
+    }
+  }
+}

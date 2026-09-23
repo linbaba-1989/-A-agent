@@ -209,8 +209,7 @@ def report_view(result: dict[str, Any]) -> dict[str, Any]:
     chief = result.get("chief_researcher", {})
     data = chief.get("data") or {}
     summary = chief_summary(result)
-    return {"stance": summary["stance"], "trend": summary["trend"], "risk": summary["risk"],
-            "confidence": summary["confidence"], "data_status": summary["data_status"],
+    return {**summary, "data_levels": workforce_data(result),
             "chief": data, "employees": result.get("employees", {}), "raw": result}
 
 

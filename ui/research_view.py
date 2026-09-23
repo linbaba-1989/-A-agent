@@ -97,16 +97,13 @@ def configured_models(ctx):
 
 def chief_summary(result):
     chief = (result.get("chief_researcher") or {}).get("data") or {}
-    employees = result.get("employees") or {}
-    def field(role, key):
-        row = employees.get(role) or {}
-        return (row.get("data") or {}).get(key) if row.get("success") else None
-    # Never infer stance from prose or bull/bear list lengths.
-    stance = chief.get("overall_view") or chief.get("stance")
+    # The headline is a direct rendering of ChiefReport, including older saved
+    # reports that did not yet have these fields. Do not infer a missing value.
+    stance = chief.get("overall_view")
     short_term = chief.get("short_term_view")
     mid_term = chief.get("mid_term_view")
-    trend = chief.get("trend_state") or field("technical_analyst", "trend")
-    risk = chief.get("risk_level") or field("risk_officer", "risk_level")
+    trend = chief.get("trend_state")
+    risk = chief.get("risk_level")
     view_labels = {"bullish": "偏多", "neutral_bullish": "中性偏多", "neutral": "中性",
                    "neutral_bearish": "中性偏空", "bearish": "偏空", "unavailable": "数据不足"}
     trend_labels = {"strong_up": "强势上行", "uptrend": "上升趋势", "range_up": "偏强震荡",
@@ -115,11 +112,33 @@ def chief_summary(result):
                     "up": "上行", "down": "下行"}
     risk_labels = {"low": "低", "medium": "中等", "high": "高", "very_high": "极高",
                    "unavailable": "数据不足"}
+    completeness = {"complete": "完整", "partial": "部分缺失",
+                    "insufficient": "证据不足"}.get(chief.get("data_completeness"))
     return {"stance": view_labels.get(stance, stance) if present(stance) else None,
             "short_term": view_labels.get(short_term, short_term) if present(short_term) else None,
             "mid_term": view_labels.get(mid_term, mid_term) if present(mid_term) else None,
             "trend": trend_labels.get(trend, trend) if present(trend) else None,
             "risk": risk_labels.get(risk, risk) if present(risk) else None,
-            "confidence": chief.get("confidence"),
-            "data_status": {"available": "可用", "partial": "部分缺失", "unavailable": "不可用"}[
-                workforce_data(result)["chief_researcher"]]}
+            "confidence": chief.get("confidence") if isinstance(chief.get("confidence"), (int, float)) else None,
+            "confidence_cap": chief.get("confidence_cap") if isinstance(chief.get("confidence_cap"), (int, float)) else None,
+            "data_status": completeness}
+
+
+def chief_conclusions(result):
+    """Only existing ChiefReport conclusion fields, normalized for compact display."""
+    chief = (result.get("chief_researcher") or {}).get("data") or {}
+
+    def strings(key, text_key=None):
+        values = chief.get(key)
+        if not isinstance(values, list): return []
+        items = []
+        for value in values:
+            text = value.get(text_key) if isinstance(value, dict) and text_key else value
+            if isinstance(text, str) and present(text): items.append(text.strip())
+        return items
+
+    return {"关键驱动": strings("key_drivers"),
+            "关键风险": strings("key_risks"),
+            "关键冲突": strings("key_conflicts", "description"),
+            "失效条件": strings("invalidation_conditions", "condition"),
+            "缺失证据": strings("missing_evidence")}

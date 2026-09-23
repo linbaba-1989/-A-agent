@@ -78,6 +78,21 @@ def test_service_reuses_supplied_provider_and_loads_history_once():
     assert result.facts["ma60"] != "unavailable"
 
 
+def test_service_accepts_qmt_provider_raw_instrument_detail():
+    class RawDetailProvider(FakeProvider):
+        normalized_instrument = None
+
+        def get_instrument_detail(self, symbol):
+            return {"InstrumentName": "烽火通信", "FloatVolume": 1_271_608_000,
+                    "TotalVolume": 1_271_608_000}
+
+    scanner = SimpleNamespace(snapshot_history=SimpleNamespace(speed=lambda symbol, minute: 1.0),
+                              _volume_ratio=lambda tick, history: 1.2)
+    result = StockResearchService(RawDetailProvider(), scanner, {"market": "已收盘"}).load("600498.SH")
+    assert result.facts["name"] == "烽火通信"
+    assert result.facts["turnover_rate"] != "unavailable"
+
+
 def test_kline_uses_chinese_up_red_down_green_and_contains_volume():
     history = pd.DataFrame({"date": pd.date_range("2026-01-01", periods=3),
                             "open": [10, 11, 10], "high": [12, 12, 11], "low": [9, 9, 8],
