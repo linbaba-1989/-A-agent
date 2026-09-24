@@ -102,7 +102,8 @@ def test_eval_native_request_serializes_through_sdk_mock_transport(
     assert prepared["provider"].base_url == url
     assert prepared["provider"].timeout == eval_timeout
     assert prepared["provider"] is not registry.get(name)
-    assert prepared["reasoning_effort"] == "low"
+    expected_effort = "none" if name == "deepseek" else "low"
+    assert prepared["reasoning_effort"] == expected_effort
     assert prepared["max_output_tokens"] == cap
     assert asdict(registry.for_model(name, model)) == production_before
 
@@ -121,7 +122,7 @@ def test_eval_native_request_serializes_through_sdk_mock_transport(
         body = bodies[0]
         assert body["model"] == model
         assert body["response_format"] == prepared["response_format"]
-        assert body["reasoning_effort"] == "low"
+        assert body["reasoning_effort"] == expected_effort
         assert body[cap_field] == cap
         assert {"max_tokens", "max_completion_tokens", "max_output_tokens"} & body.keys() == {cap_field}
         assert all(message["role"] in ("system", "user") for message in body["messages"])
@@ -148,7 +149,7 @@ def test_eval_native_request_serializes_through_sdk_mock_transport(
         else:
             assert body["response_format"] == {"type": "json_object"}
             if name == "deepseek":
-                assert body["thinking"] == {"type": "enabled"}
+                assert "thinking" not in body
 
         # The same router, called without evaluation overrides, retains the
         # production cap, reasoning, schema mode, and timeout behavior.
@@ -239,7 +240,7 @@ def _passing_baseline_rows():
             "case_id": case_id, "role": role, "fixture_hash": load_fixture(case_id)["fixture_hash"],
             "fact_bundle_hash": load_fixture(case_id)["fact_bundle_hash"],
             "provider": name, "model": model, "few_shot_enabled": False,
-            "reasoning_effort": "low",
+            "reasoning_effort": "none" if name == "deepseek" else "low",
             "response_format_type": "json_schema" if name == "qwen" else "json_object",
             "schema_hash": canonical_hash(ROLE_SCHEMAS_WITH_CHIEF[role].model_json_schema()),
             "max_output_tokens": 3072 if name == "qwen" else 4096,
@@ -247,7 +248,10 @@ def _passing_baseline_rows():
             "status": "PASS", "schema_valid": True, "finish_reason": "stop",
             "runtime_diagnostics": {"response_received": True, "timeout_phase": "unknown",
                                     "timeout_config": {"read": 150 if name == "kimi" else 90}},
-            "metrics": {"hallucination_rule_hits": [], "confidence_cap": True},
+            "metrics": {"hallucination_rule_hits": [], "confidence_cap": True,
+                        "numeric_relation_violation": False,
+                        "temporal_semantics_violation": False,
+                        "provenance_violation": False},
         })
     return rows
 

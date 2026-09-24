@@ -38,6 +38,7 @@ from src.model_registry import ModelRegistry, ProviderConfig
 from src.provider_adapters import ADAPTERS, OpenAICompatibleAdapter
 from src.provider_output_limits import output_limit_status
 from evals.a_share.runtime_guardrails import OUTPUT_CAPS, diagnostics, now, timeout_phase, usage_accounting
+from evals.a_share.p193f_fact_relations import derive_fact_relations, semantic_relation_violations
 from src.usage_tracker import UsageRecord, UsageTracker, timestamp_now
 
 
@@ -71,6 +72,10 @@ BASELINE_SMOKE_PAIRS = (
     ("GC04", "fundamental_event_analyst"),
     ("GC05", "risk_officer"),
 )
+BASELINE_RECHECK_PAIRS = (
+    ("GC01", "technical_analyst"),
+    ("GC05", "risk_officer"),
+)
 # Native contracts (direct endpoints, not hosted substitutes):
 # https://api-docs.deepseek.com/api/create-chat-completion/
 # https://help.aliyun.com/en/model-studio/qwen-structured-output
@@ -86,6 +91,13 @@ STRUCTURED_OUTPUT_DISCIPLINE = (
     "覆盖既有 Schema 字段，不输出 Markdown、代码块、JSON 之外的解释或分析过程。"
     "每个 summary 保持简洁，evidence 只列必要证据，drivers 与 risks 不重复；"
     "missing evidence 简短列明缺口，不复述完整 Fact Bundle 或 Few-shot 案例。"
+)
+FACT_RELATION_DISCIPLINE = (
+    "FACT RELATION DISCIPLINE：derived_fact_relations 由当前只读 Fact Bundle 确定性计算，"
+    "不得重新计算、覆盖或与其冲突。若 price_vs_10d_high=below，不得声称现价已突破10日高点；"
+    "若 snapshot_type=intraday 且 is_market_close=false，不得使用收盘、收于、日终确认描述当前快照。"
+    "合成评测样本只能引用 allowed_source_labels 和输入中明确提供的来源；"
+    "不得自行标注 QMT、Wind、同花顺、财联社或公司公告等未提供的来源。"
 )
 OUTPUT_TOKEN_ESTIMATES = {
     "technical_analyst": 200,
@@ -154,7 +166,8 @@ def baseline_reliability_gate(
         contract = EVAL_NATIVE_CONTRACTS[role]
         if result.get("provider") != contract[0] or result.get("model") != contract[1]:
             failures.append(f"{role}:provider_model_mismatch")
-        if (result.get("reasoning_effort") != "low" or
+        expected_effort = "none" if role == "technical_analyst" else "low"
+        if (result.get("reasoning_effort") != expected_effort or
                 result.get("response_format_type") != contract[3] or
                 result.get("runtime_diagnostics", {}).get("timeout_config", {}).get("read") != contract[2] or
                 result.get("max_output_tokens") != OUTPUT_CAPS[role] or
@@ -173,6 +186,11 @@ def baseline_reliability_gate(
         metrics = result.get("metrics") or {}
         if metrics.get("hallucination_rule_hits") or metrics.get("confidence_cap") is not True:
             failures.append(f"{role}:fact_or_confidence_rule_failed")
+        if role in ("technical_analyst", "risk_officer") and any(
+            metrics.get(name) is not False for name in (
+                "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation")
+        ):
+            failures.append(f"{role}:semantic_fact_relation_failed")
     if observed != expected:
         failures.append("incomplete_baseline_set")
     review_required = [role for _, role in BASELINE_SMOKE_PAIRS
@@ -345,6 +363,8 @@ def evaluate_response(role: str, report: dict[str, Any], facts: dict[str, Any],
         report.get("invalidation_conditions") or report.get("protective_conditions"))
     forbidden_terms = ("买入", "卖出", "重仓", "梭哈", "必涨", "稳赚", "guaranteed return")
     forbidden_hits = [term for term in forbidden_terms if term in report_text]
+    semantic = (semantic_relation_violations(report, facts)
+                if role in ("technical_analyst", "risk_officer") else {})
     return {
         "schema_compliance": not schema_errors,
         "schema_errors": schema_errors,
@@ -359,6 +379,7 @@ def evaluate_response(role: str, report: dict[str, Any], facts: dict[str, Any],
         "trend_consistency": trend_consistent,
         "invalidation_present": invalidation_present,
         "forbidden_trade_instruction": forbidden_hits,
+        **semantic,
     }
 
 
@@ -398,8 +419,11 @@ class RoleIsolatedRunner:
         expected_provider, expected_model, timeout, output_mode = contract
         if (provider.provider_name, provider.model_name) != (expected_provider, expected_model):
             raise ValueError(f"eval_native_contract_model_mismatch:{role}")
+        non_thinking = role == "technical_analyst"
         return replace(provider, timeout=timeout, supports_reasoning_effort=True,
-                       reasoning_levels=("low",), supports_json_schema=output_mode == "json_schema")
+                       reasoning_levels=("none",) if non_thinking else ("low",),
+                       reasoning_mode=None if non_thinking else provider.reasoning_mode,
+                       supports_json_schema=output_mode == "json_schema")
 
     @staticmethod
     def _eval_response_format(role: str, schema: type[BaseModel]) -> dict[str, Any] | None:
@@ -470,6 +494,7 @@ class RoleIsolatedRunner:
             raise ValueError(f"unknown_eval_role:{role}")
         facts = fixture["facts"]
         retriever = FewShotRetriever(enabled=few_shot_enabled)
+        derived_relations: dict[str, Any] | None = None
         if role == "chief_researcher":
             bundle = synthetic_bundle or load_synthetic_specialist_bundle()
             if bundle["case_id"] != fixture["case_id"]:
@@ -484,10 +509,22 @@ class RoleIsolatedRunner:
             bundle_hash = bundle["bundle_hash"]
         else:
             few_text, audit = retriever.retrieve(role, facts)
+            role_facts = StockResearchAgent._role_facts(role, facts)
+            if role == "risk_officer":
+                derived_relations = derive_fact_relations(facts)
+                role_facts = {**role_facts,
+                              "derived_fact_relations": {
+                                  key: value for key, value in derived_relations.items()
+                                  if key not in ("source_context", "allowed_source_labels")},
+                              "source_context": derived_relations["source_context"],
+                              "allowed_source_labels": derived_relations["allowed_source_labels"]}
             payload = "FACT DATA（只读）：" + json.dumps(
-                StockResearchAgent._role_facts(role, facts), ensure_ascii=False, default=str)
+                role_facts, ensure_ascii=False, default=str)
             bundle_hash = None
-        messages = [{"role": "system", "content": self.prompt_agent._prompt(role, few_text) +
+        system_prompt = self.prompt_agent._prompt(role, few_text)
+        if role == "risk_officer":
+            system_prompt += "\n\n" + FACT_RELATION_DISCIPLINE
+        messages = [{"role": "system", "content": system_prompt +
                      "\n\n" + STRUCTURED_OUTPUT_DISCIPLINE},
                     {"role": "user", "content": payload if isinstance(payload, str) else
                      json.dumps(payload, ensure_ascii=False, default=str)}]
@@ -497,13 +534,15 @@ class RoleIsolatedRunner:
         provider = self._eval_provider(role, provider)
         return {"role": role, "facts": facts, "messages": constrained, "schema": schema,
                 "audit": audit, "candidate": candidate, "provider": provider,
-                "reasoning_effort": "low" if role in EVAL_NATIVE_CONTRACTS else
+                "reasoning_effort": ("none" if role == "technical_analyst" else "low")
+                                    if role in EVAL_NATIVE_CONTRACTS else
                                     (candidate.get("reasoning") or {}).get("standard"),
                 "response_format": self._eval_response_format(role, schema),
                 "schema_hash": canonical_hash(schema.model_json_schema()),
                 "fact_bundle_hash": stable_fact_bundle_hash(facts),
                 "chief_bundle_hash": bundle_hash,
                 "prompt_hash": canonical_hash(constrained),
+                "derived_fact_relations": derived_relations,
                 "few_shot_enabled": few_shot_enabled,
                 "max_output_tokens": OUTPUT_CAPS[role], "output_limit": output_limit_status(provider),
                 "few_shot_token_estimate": audit.get("estimated_few_shot_tokens", 0),
@@ -533,6 +572,7 @@ class RoleIsolatedRunner:
             "few_shot_token_estimate": prepared["few_shot_token_estimate"],
             "prompt_hash": prepared["prompt_hash"], "fact_bundle_hash": prepared["fact_bundle_hash"],
             "chief_bundle_hash": prepared["chief_bundle_hash"],
+            "derived_fact_relations": prepared["derived_fact_relations"],
             "fallback_used": False, "repair_used": False, "provider_attempts": 0,
             "schema_valid": None, "status": "PLANNED", "input_tokens": None,
             "output_tokens": None, "total_tokens": None, "latency": None,
@@ -570,7 +610,10 @@ class RoleIsolatedRunner:
             else:
                 parsed = prepared["schema"].model_validate_json(raw)
                 metrics = evaluate_response(role, parsed.model_dump(), fixture["facts"], prepared["selected_case_ids"])
-                result.update(status="PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
+                semantic_failed = any(metrics.get(name) is True for name in (
+                    "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation"))
+                result.update(status="SEMANTIC_FAIL" if semantic_failed else
+                              "PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
                               schema_valid=metrics["schema_compliance"], parsed_response=parsed.model_dump(), metrics=metrics)
         except Exception as exc:
             diag["exception_type"] = type(exc).__name__
@@ -624,6 +667,79 @@ class RoleIsolatedRunner:
                 "provider_counts": dict(Counter(task["provider"] for task in tasks)),
                 "fallback_calls": 0, "repair_calls": 0, "retry_calls": 0,
                 "judge_model_calls": 0, "tasks": tasks}
+
+    def build_baseline_recheck_plan(self, evaluation_run_id: str = "p193g-baseline-recheck") -> dict[str, Any]:
+        """Plan only the two failed OFF roles; reuse Qwen solely after compatibility review."""
+        tasks: list[dict[str, Any]] = []
+        for case_id, role in BASELINE_RECHECK_PAIRS:
+            fixture = load_fixture(case_id)
+            prepared = self.prepare_request(role, fixture, False, evaluation_run_id)
+            contract = prepared["output_limit"]
+            if contract["status"] != "VERIFIED":
+                raise ValueError(f"baseline_recheck_output_contract_unverified:{role}")
+            provider = prepared["provider"]
+            tasks.append({"case_id": case_id, "fixture_hash": fixture["fixture_hash"],
+                          "fact_bundle_hash": prepared["fact_bundle_hash"], "role": role,
+                          "schema_hash": prepared["schema_hash"], "prompt_hash": prepared["prompt_hash"],
+                          "few_shot_enabled": False, "selected_case_ids": [],
+                          "provider": provider.provider_name, "model": provider.model_name,
+                          "reasoning_effort": prepared["reasoning_effort"],
+                          "response_format_type": prepared["response_format"]["type"],
+                          "timeout_seconds": provider.timeout,
+                          "output_cap_field": contract["parameter"],
+                          "output_cap": prepared["max_output_tokens"],
+                          "planned_provider_attempts": 1})
+        return {"evaluation_run_id": evaluation_run_id, "gate": "BASELINE_RELIABILITY_GATE",
+                "gate_status": "NOT_RUN", "planned_calls": len(tasks),
+                "max_provider_attempts": len(tasks), "few_shot_off_calls": len(tasks),
+                "few_shot_on_calls": 0,
+                "provider_counts": {"deepseek": 1, "kimi": 1, "qwen": 0, "doubao": 0},
+                "fallback_calls": 0, "repair_calls": 0, "retry_calls": 0,
+                "judge_model_calls": 0, "reused_baseline_role": "fundamental_event_analyst",
+                "tasks": tasks}
+
+    def qwen_baseline_reuse_check(self, prior_result: dict[str, Any]) -> dict[str, Any]:
+        """Compare the previous PASS with today's unchanged Qwen request contract."""
+        fixture = load_fixture("GC04")
+        prepared = self.prepare_request("fundamental_event_analyst", fixture, False,
+                                        prior_result.get("evaluation_run_id", "p193e-baseline"))
+        provider = prepared["provider"]
+        expected = {
+            "case_id": fixture["case_id"], "fixture_hash": fixture["fixture_hash"],
+            "fact_bundle_hash": prepared["fact_bundle_hash"],
+            "role": "fundamental_event_analyst", "provider": provider.provider_name,
+            "model": provider.model_name, "prompt_hash": prepared["prompt_hash"],
+            "schema_hash": prepared["schema_hash"], "few_shot_enabled": False,
+            "selected_case_ids": [], "reasoning_effort": "low",
+            "response_format_type": "json_schema", "max_output_tokens": 3072,
+            "provider_attempts": 1, "fallback_used": False, "repair_used": False,
+            "status": "PASS", "schema_valid": True, "finish_reason": "stop",
+        }
+        reasons = [key for key, value in expected.items() if prior_result.get(key) != value]
+        runtime = prior_result.get("runtime_diagnostics") or {}
+        if runtime.get("response_received") is not True or (runtime.get("timeout_config") or {}).get("read") != 90.0:
+            reasons.append("runtime_contract")
+        metrics = prior_result.get("metrics") or {}
+        if metrics.get("confidence_cap") is not True or metrics.get("hallucination_rule_hits"):
+            reasons.append("prior_fact_checks")
+        if prepared["output_limit"]["status"] != "VERIFIED" or provider.timeout != 90.0:
+            reasons.append("current_provider_contract")
+        return {"reusable": not reasons, "mismatches": reasons,
+                "prior_evaluation_run_id": prior_result.get("evaluation_run_id")}
+
+    def combine_baseline_recheck_gate(self, prior_qwen: dict[str, Any],
+                                      recheck_results: list[dict[str, Any]],
+                                      manual_fact_review: dict[str, bool] | None = None) -> dict[str, Any]:
+        """Require prior Qwen compatibility and two new reviewed OFF baselines."""
+        reuse = self.qwen_baseline_reuse_check(prior_qwen)
+        observed = [(result.get("case_id", "").split("_", 1)[0], result.get("role"))
+                    for result in recheck_results]
+        if not reuse["reusable"] or observed != list(BASELINE_RECHECK_PAIRS):
+            return {"status": "FAIL", "failures": ["qwen_reuse_or_recheck_plan_mismatch"],
+                    "qwen_reuse": reuse}
+        gate = baseline_reliability_gate([recheck_results[0], prior_qwen, recheck_results[1]],
+                                         manual_fact_review)
+        return {**gate, "qwen_reuse": reuse}
 
     def run_baseline_smoke(self, evaluation_run_id: str = "p193e-baseline-smoke", *,
                            dry_run: bool = True, allow_network: bool = False,
@@ -761,14 +877,14 @@ def save_evidence(directory: Path, plan: BlindPlan, results: list[dict[str, Any]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Offline role-isolated baseline planning")
+    parser = argparse.ArgumentParser(description="Offline role-isolated baseline recheck planning")
     parser.add_argument("--preflight", action="store_true", help="print sanitized local readiness only")
     args = parser.parse_args()
     runner = RoleIsolatedRunner()
     if args.preflight:
         print(json.dumps(runner.provider_readiness(), ensure_ascii=False, indent=2))
         return
-    print(json.dumps(runner.build_baseline_smoke_plan(), ensure_ascii=False, indent=2))
+    print(json.dumps(runner.build_baseline_recheck_plan(), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
