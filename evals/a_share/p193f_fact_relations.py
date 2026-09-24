@@ -124,6 +124,11 @@ def derive_fact_relations(facts: dict[str, Any]) -> dict[str, Any]:
         "current_price": float(price) if price is not None else None,
         "ten_day_high": float(high) if high is not None else None,
         "price_vs_10d_high": relation,
+        "current_price_vs_10d_high": relation,
+        "close_price_available": is_close is True or _finite_decimal(fact_data.get("close_price")) is not None,
+        "ma60_slope_available": _trajectory_available(fact_data),
+        "range_position_20d_percent": fact_data.get("range_position_20d"),
+        "range_position_is_percentile": False,
         "breakout_10d_high": price > high if price is not None and high is not None else None,
         "snapshot_time": _snapshot_time(fact_data.get("quote_time") or fact_data.get("snapshot_time")),
         "snapshot_type": snapshot_type,
@@ -175,8 +180,10 @@ def _numeric_hits(report: dict[str, Any], facts: dict[str, Any], relations: dict
     price_pattern, high_pattern = _number_pattern(price), _number_pattern(high)
     hits: list[dict[str, str]] = []
     for path, string in _string_leaves(report):
-        for clause in re.split(r"[\n。；;！!？?，,]", string):
+        for clause in re.split(r"[\n。；;！!？?，,]|但是|但|然而", string):
             if not clause.strip():
+                continue
+            if assertion_context(clause, path) != "CURRENT_ASSERTION":
                 continue
             asserted: str | None = None
             if relation != "above" and _targeted_claim(clause, _ABOVE_VERB, high_pattern):
@@ -207,21 +214,14 @@ def _numeric_hits(report: dict[str, Any], facts: dict[str, Any], relations: dict
 def _temporal_hits(report: dict[str, Any], relations: dict[str, Any]) -> list[dict[str, str]]:
     if relations.get("is_market_close") is not False:
         return []
-    price = _finite_decimal(relations.get("current_price"))
-    price_re = _number_pattern(price).pattern if price is not None else r"\d+(?:\.\d+)?"
-    close_assertion = re.compile(
-        rf"(?:收于\s*{price_re}|收盘(?:价|报|为|于|在)?\s*{price_re}|"
-        rf"以\s*{price_re}\s*(?:元)?收盘|{price_re}\s*(?:元)?\s*(?:为|是)?\s*收盘价|"
-        r"(?:今日|当日|本日|当前)\s*收盘|日终确认|收盘确认)"
-    )
-    negated = re.compile(r"(?:未|尚未|没有|不可用|缺失|不能|无法|待|若|如果|假设|需要).{0,7}(?:收盘|日终)")
-    prior = re.compile(r"(?:昨日|昨天|上一交易日|前一交易日|前收|昨收).{0,8}(?:收盘|收于)")
-    hits: list[dict[str, str]] = []
-    for path, string in _string_leaves(report):
-        for clause in re.split(r"[\n。；;！!？?，,]", string):
-            if close_assertion.search(clause) and not negated.search(clause) and not prior.search(clause):
-                hits.append({"path": path, "claim": clause.strip(),
-                             "expected_snapshot_type": "intraday"})
+    hits = []
+    for path, clause in _claims(report):
+        if assertion_context(clause, path) != "CURRENT_ASSERTION":
+            continue
+        if re.search(r"(?:昨日|昨天|上一交易日|前一交易日|前收|昨收)", clause):
+            continue
+        if re.search(r"收于\s*\d|收盘(?:价|报|为|于|在|接近|确认)|截至收盘|日终确认|今日收盘", clause):
+            hits.append({"path": path, "claim": clause, "expected_snapshot_type": "intraday"})
     return hits
 
 
@@ -247,28 +247,22 @@ def _source_is_allowed(label: str, facts: dict[str, Any], allowed: set[str]) -> 
 def _provenance_hits(report: dict[str, Any], facts: dict[str, Any], relations: dict[str, Any]) -> list[dict[str, str]]:
     allowed = {str(label).casefold() for label in relations.get("allowed_source_labels", [])}
     hits: list[dict[str, str]] = []
-    for path, string in _string_leaves(report):
-        field = path.rsplit(".", 1)[-1]
-        explicit_source_field = field in {"source", "evidence_source", "data_source"} or field.endswith("_source")
-        if explicit_source_field and not _source_is_allowed(string, facts, allowed):
-            hits.append({"path": path, "label": string.strip(), "reason": "unprovided_source_field"})
+    for path, string in _claims(report):
+        if assertion_context(string, path) != "CURRENT_ASSERTION":
             continue
+        field = path.rsplit(".", 1)[-1]
+        explicit_source_field = field in {"source", "evidence_source", "data_source"} and "metadata" not in path
         for label, pattern in _EXTERNAL_LABELS:
             if any(pattern.search(source) for source in allowed):
                 continue
             found = pattern.search(string)
             if found is None:
                 continue
-            if explicit_source_field:
-                hits.append({"path": path, "label": label, "reason": "unprovided_external_source"})
-                continue
             before = string[max(0, found.start() - 10):found.start()]
             after = string[found.end():found.end() + 10]
-            negated = re.search(r"(?:缺少|缺失|未提供|无|不可用|待核实|需要).{0,5}$", before)
             attribution = re.search(r"(?:来源|数据源|来自|据|根据|引自|由).{0,5}$", before) or re.match(
-                r".{0,5}(?:显示|报道|披露|证实|提供|记录|统计|数据)", after
-            )
-            if attribution and not negated:
+                r".{0,5}(?:显示|报道|披露|证实|提供|记录|统计)", after)
+            if explicit_source_field or attribution:
                 hits.append({"path": path, "label": label, "reason": "unprovided_external_attribution"})
     return hits
 
@@ -285,6 +279,7 @@ def semantic_relation_violations(
     temporal = _temporal_hits(report, derived)
     provenance = _provenance_hits(report, fact_data, derived)
     return {
+        **additional_semantic_checks(report, fact_data),
         "numeric_relation_violation": bool(numeric),
         "numeric_relation_violation_hits": numeric,
         "temporal_semantics_violation": bool(temporal),
@@ -292,3 +287,110 @@ def semantic_relation_violations(
         "provenance_violation": bool(provenance),
         "provenance_violation_hits": provenance,
     }
+
+
+# Context is evaluated per clause, never by keywords co-occurring across a report.
+def assertion_context(clause: str, path: str = "") -> str:
+    if re.search(r"(?:当前|现价|已经|今日|目前|已确认|现在).*(?:已突破|站上|收于|收盘价|数据显示)", clause):
+        # Explicit present assertions still need local negation/condition handling below.
+        explicit = True
+    else:
+        explicit = False
+    if re.search(r"若|如果|一旦|假设", clause):
+        return "CONDITIONAL"
+    if re.search(r"后续|未来|之后|后再|后风险|后将|将构成|需.*确认|待.*确认", clause):
+        return "FUTURE_SCENARIO"
+    if re.search(r"尚未|未能|未获得|未站|未突破|不得|不能|无法|并未|没有|缺少|缺失|未提供|不可用|无完整|无.*数据|非.*盘中|非收盘|不应|不代表", clause):
+        return "NEGATED_ASSERTION"
+    if not explicit and any(k in path for k in ("invalidation_conditions", "protective_conditions")):
+        return "CONDITIONAL"
+    if not explicit and any(k in path for k in ("missing_evidence", "missing_information", "data_gaps", "metadata")):
+        return "NEGATED_ASSERTION"
+    if re.search(r"(?:突破|站上).*(?:后|将|才能)|收盘后|收盘.*再确认", clause):
+        return "FUTURE_SCENARIO"
+    return "CURRENT_ASSERTION"
+
+
+def _claims(report: dict[str, Any]) -> Iterator[tuple[str, str]]:
+    for path, text in _string_leaves(report):
+        for clause in re.split(r"[\n。；;！!？?，,]|但是|但|然而", text):
+            if clause.strip():
+                yield path, clause.strip()
+
+
+def _trajectory_available(facts: dict[str, Any]) -> bool:
+    if _finite_decimal(facts.get("ma60_slope")) is not None:
+        return True
+    history = facts.get("ma60_history", [])
+    if isinstance(history, list) and sum(_finite_decimal(x) is not None for x in history) >= 2:
+        return True
+    rows = facts.get("recent_daily_k", [])
+    return isinstance(rows, list) and sum(isinstance(x, dict) and _finite_decimal(x.get("ma60")) is not None for x in rows) >= 2
+
+
+def trade_instruction_hits(report: dict[str, Any]) -> list[dict[str, str]]:
+    hits = []
+    for path, clause in _claims(report):
+        if re.search(r"(?:不得|不要|不建议|禁止).*(?:买入|卖出|梭哈|重仓)", clause):
+            continue
+        if re.search(r"(?:建议|立即|现在|当前|明日开盘|务必|应当|应该).{0,6}(?:买入|卖出|加仓|清仓|重仓|梭哈)|(?:买入|卖出)\s*\d+\s*%.*仓位|必涨|稳赚|guaranteed return", clause, re.I):
+            hits.append({"path": path, "claim": clause})
+    return hits
+
+
+_DOMAINS = {
+    "fundamental_data": r"基本面|财报|业绩|利润|营收",
+    "valuation_data": r"估值|市盈率|市净率",
+    "event_data": r"事件|订单|中标|利好",
+    "announcement_data": r"公司公告|公告",
+    "news_data": r"新闻|财联社",
+    "industry_data": r"行业",
+    "market_breadth": r"市场宽度|上涨家数|下跌家数",
+    "sector_strength": r"板块强度|板块走强",
+    "leader_status": r"龙头",
+}
+
+
+def unavailable_evidence_hits(report: dict[str, Any], facts: dict[str, Any]) -> list[dict[str, str]]:
+    hits = []
+    # Keep evidence status and claim together; status elsewhere is irrelevant.
+    def evidence_nodes(value: Any):
+        if isinstance(value, dict):
+            if value.get("status") == "confirmed" and isinstance(value.get("claim"), str):
+                yield value["claim"]
+            for v in value.values():
+                yield from evidence_nodes(v)
+        elif isinstance(value, list):
+            for v in value:
+                yield from evidence_nodes(v)
+    confirmed = set(evidence_nodes(report))
+    for path, clause in _claims(report):
+        if assertion_context(clause, path) != "CURRENT_ASSERTION":
+            continue
+        asserted = any(clause in claim for claim in confirmed) or re.search(r"显示|披露|获得|增长|改善|确认|证实|中标|报道|上升|下降", clause)
+        if not asserted:
+            continue
+        for field, topic in _DOMAINS.items():
+            if facts.get(field) == "unavailable" and re.search(topic, clause):
+                hits.append({"path": path, "claim": clause, "field": field})
+    return hits
+
+
+def additional_semantic_checks(report: dict[str, Any], facts: dict[str, Any]) -> dict[str, Any]:
+    transformed, trajectory = [], []
+    percentile = any(_finite_decimal(facts.get(k)) is not None for k in ("percentile_20d", "price_percentile_20d", "statistical_percentile_20d"))
+    for path, clause in _claims(report):
+        # A negative trajectory (not yet turned) is still a claim about trajectory.
+        if not _trajectory_available(facts) and re.search(r"MA60|长期均线|60日均线", clause, re.I) and re.search(r"拐头|走平|加速上行|持续下弯|正在上升|正在下降|斜率", clause):
+            if not re.search(r"无法|不能|不应|未提供|缺少|缺失|未知|若|如果|后续", clause):
+                trajectory.append({"path": path, "claim": clause, "reason": "ma60_history_or_slope_missing"})
+        if assertion_context(clause, path) != "CURRENT_ASSERTION":
+            continue
+        if _finite_decimal(facts.get("range_position_20d")) is not None and not percentile and re.search(r"20日.*分位|\d+(?:\.\d+)?分位|statistical percentile|percentile", clause, re.I):
+            transformed.append({"path": path, "claim": clause, "reason": "range_position_is_not_percentile"})
+    trade = trade_instruction_hits(report)
+    unavailable = unavailable_evidence_hits(report, facts)
+    return {"semantic_transformation_violation": bool(transformed), "semantic_transformation_violation_hits": transformed,
+            "unsupported_trajectory_claim": bool(trajectory), "unsupported_trajectory_claim_hits": trajectory,
+            "trade_instruction_violation": bool(trade), "trade_instruction_violation_hits": trade,
+            "unavailable_to_confirmed": sorted({h["field"] for h in unavailable}), "unavailable_to_confirmed_hits": unavailable}

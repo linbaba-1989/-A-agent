@@ -38,7 +38,7 @@ from src.model_registry import ModelRegistry, ProviderConfig
 from src.provider_adapters import ADAPTERS, OpenAICompatibleAdapter
 from src.provider_output_limits import output_limit_status
 from evals.a_share.runtime_guardrails import OUTPUT_CAPS, diagnostics, now, timeout_phase, usage_accounting
-from evals.a_share.p193f_fact_relations import derive_fact_relations, semantic_relation_violations
+from evals.a_share.p193f_fact_relations import derive_fact_relations, semantic_relation_violations, unavailable_evidence_hits, trade_instruction_hits
 from src.usage_tracker import UsageRecord, UsageTracker, timestamp_now
 
 
@@ -92,6 +92,13 @@ STRUCTURED_OUTPUT_DISCIPLINE = (
     "每个 summary 保持简洁，evidence 只列必要证据，drivers 与 risks 不重复；"
     "missing evidence 简短列明缺口，不复述完整 Fact Bundle 或 Few-shot 案例。"
 )
+FACT_SEMANTIC_DISCIPLINE = """FACT SEMANTIC DISCIPLINE
+盘中intraday snapshot不得描述为close/收盘；区间位置range position不是统计percentile。
+没有均线历史或slope不得描述均线斜率、拐头、走平或持续变化。
+条件语句必须明确使用若/如果/后续；未来失效条件不得写成当前事实。
+不得重新计算覆盖derived_fact_relations；这些是事实边界，不是方向结论。
+"""
+
 FACT_RELATION_DISCIPLINE = (
     "FACT RELATION DISCIPLINE：derived_fact_relations 由当前只读 Fact Bundle 确定性计算，"
     "不得重新计算、覆盖或与其冲突。若 price_vs_10d_high=below，不得声称现价已突破10日高点；"
@@ -178,17 +185,22 @@ def baseline_reliability_gate(
         if (result.get("provider_attempts") != 1 or result.get("fallback_used") is not False or
                 result.get("repair_used") is not False):
             failures.append(f"{role}:attempt_policy_failed")
-        if (result.get("status") != "PASS" or result.get("schema_valid") is not True or
+        if (result.get("status") not in {"PASS", "SEMANTIC_FAIL"} or result.get("schema_valid") is not True or
                 result.get("finish_reason") != "stop"):
             failures.append(f"{role}:response_or_schema_failed")
         if not result.get("runtime_diagnostics", {}).get("response_received"):
             failures.append(f"{role}:no_provider_response")
         metrics = result.get("metrics") or {}
+        if isinstance(result.get("parsed_response"), dict):
+            metrics = {**metrics, **semantic_relation_violations(result["parsed_response"], fixture["facts"])}
         if metrics.get("hallucination_rule_hits") or metrics.get("confidence_cap") is not True:
             failures.append(f"{role}:fact_or_confidence_rule_failed")
-        if role in ("technical_analyst", "risk_officer") and any(
-            metrics.get(name) is not False for name in (
-                "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation")
+        if metrics.get("unavailable_to_confirmed"):
+            failures.append(f"{role}:unavailable_to_confirmed")
+        if any(
+            metrics.get(name, False) is not False for name in (
+                "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation",
+                "semantic_transformation_violation", "unsupported_trajectory_claim", "trade_instruction_violation")
         ):
             failures.append(f"{role}:semantic_fact_relation_failed")
     if observed != expected:
@@ -310,19 +322,7 @@ def _missing_evidence_acknowledged(role: str, report: dict[str, Any], facts: dic
 
 
 def _unavailable_to_confirmed(report: dict[str, Any], facts: dict[str, Any]) -> list[str]:
-    text = "\n".join(_flatten_strings(report))
-    hits: list[str] = []
-    unavailable_domains = {
-        "fundamental_data": ("基本面", "财报", "业绩", "估值"),
-        "event_data": ("事件", "订单", "中标", "公告", "新闻", "利好"),
-        "market_breadth": ("市场宽度", "涨跌停", "炸板", "板块", "龙头"),
-    }
-    confirmed_words = ("已确认", "确认了", "confirmed", "已证实")
-    for key, terms in unavailable_domains.items():
-        if facts.get(key) == "unavailable" and any(word in text for word in confirmed_words):
-            if any(term in text for term in terms):
-                hits.append(key)
-    return hits
+    return sorted({hit["field"] for hit in unavailable_evidence_hits(report, facts)})
 
 
 def evaluate_response(role: str, report: dict[str, Any], facts: dict[str, Any],
@@ -361,10 +361,9 @@ def evaluate_response(role: str, report: dict[str, Any], facts: dict[str, Any],
                 trend_consistent = False
     invalidation_present = role not in ("technical_analyst", "risk_officer", "chief_researcher") or bool(
         report.get("invalidation_conditions") or report.get("protective_conditions"))
-    forbidden_terms = ("买入", "卖出", "重仓", "梭哈", "必涨", "稳赚", "guaranteed return")
-    forbidden_hits = [term for term in forbidden_terms if term in report_text]
+    forbidden_hits = trade_instruction_hits(report)
     semantic = (semantic_relation_violations(report, facts)
-                if role in ("technical_analyst", "risk_officer") else {})
+                if role in ALL_ROLES else {})
     return {
         "schema_compliance": not schema_errors,
         "schema_errors": schema_errors,
@@ -510,7 +509,7 @@ class RoleIsolatedRunner:
         else:
             few_text, audit = retriever.retrieve(role, facts)
             role_facts = StockResearchAgent._role_facts(role, facts)
-            if role == "risk_officer":
+            if role in ("technical_analyst", "risk_officer"):
                 derived_relations = derive_fact_relations(facts)
                 role_facts = {**role_facts,
                               "derived_fact_relations": {
@@ -522,8 +521,8 @@ class RoleIsolatedRunner:
                 role_facts, ensure_ascii=False, default=str)
             bundle_hash = None
         system_prompt = self.prompt_agent._prompt(role, few_text)
-        if role == "risk_officer":
-            system_prompt += "\n\n" + FACT_RELATION_DISCIPLINE
+        if role in ("technical_analyst", "risk_officer"):
+            system_prompt += "\n\n" + FACT_RELATION_DISCIPLINE + "\n\n" + FACT_SEMANTIC_DISCIPLINE
         messages = [{"role": "system", "content": system_prompt +
                      "\n\n" + STRUCTURED_OUTPUT_DISCIPLINE},
                     {"role": "user", "content": payload if isinstance(payload, str) else
@@ -611,7 +610,9 @@ class RoleIsolatedRunner:
                 parsed = prepared["schema"].model_validate_json(raw)
                 metrics = evaluate_response(role, parsed.model_dump(), fixture["facts"], prepared["selected_case_ids"])
                 semantic_failed = any(metrics.get(name) is True for name in (
-                    "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation"))
+                    "numeric_relation_violation", "temporal_semantics_violation", "provenance_violation",
+                    "semantic_transformation_violation", "unsupported_trajectory_claim", "trade_instruction_violation"))
+                semantic_failed = semantic_failed or bool(metrics["unavailable_to_confirmed"])
                 result.update(status="SEMANTIC_FAIL" if semantic_failed else
                               "PASS" if metrics["schema_compliance"] else "SCHEMA_FAIL",
                               schema_valid=metrics["schema_compliance"], parsed_response=parsed.model_dump(), metrics=metrics)
