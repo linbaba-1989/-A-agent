@@ -24,6 +24,8 @@ from src.market_clock import (DEFAULT_TRADING_CALENDAR, OPEN, beijing_now,
 from src.realtime_market import SnapshotConsumerState, market_quote_timestamp, refresh_interval_seconds
 from ui.few_shot_preview import case_details_for_audit, preview_cases
 from ui.research_view import ROLES, chief_summary, configured_models
+from ui.research_history import (HistorySaveError, STATUS_LABELS, execute_and_save,
+                                 publish_result, recent_records)
 
 
 EXAMPLE_REPORT_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "research_report_preview.json"
@@ -110,7 +112,6 @@ def _render_live_quote(ctx: dict, symbol: str, initial_quote: dict, name: str) -
 
 def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
     placeholder = st.empty()
-    started = time.perf_counter()
     # The selection belongs to this run. The cached application agent retains
     # its configured default and can serve another session independently.
     enabled = bool(ctx.get("few_shot_run_enabled", _default_case_enhancement(ctx)))
@@ -118,7 +119,10 @@ def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
     worker = StockResearchAgent(router=shared.router, prompt_dir=getattr(shared, "prompt_dir", None),
                                 few_shot_retriever=FewShotRetriever(enabled=enabled))
     with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(worker.analyze, symbol, facts, mode)
+        future = pool.submit(execute_and_save, lambda: worker.analyze(symbol, facts, mode),
+                             symbol=symbol, analysis_mode=mode, facts=facts,
+                             router=worker.router, few_shot_requested=enabled,
+                             retrieval_audit=lambda: worker._few_shot_audit)
         while not future.done():
             with placeholder.container():
                 st.warning("AI研究正在运行，请勿重复提交")
@@ -126,9 +130,6 @@ def _run_research(ctx: dict, symbol: str, mode: str, facts: dict) -> dict:
                                  few_shot_enabled=enabled, few_shot_audit=worker._few_shot_audit)
             time.sleep(.5)
         result = future.result()
-    result["elapsed_seconds"] = time.perf_counter() - started
-    result["created_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    result["few_shot_requested"] = enabled
     placeholder.empty()
     return result
 
@@ -143,7 +144,7 @@ def _research_facts(ctx: dict, symbol: str) -> dict:
 
 
 def _recent_records(symbol: str) -> list[dict]:
-    return [row for row in st.session_state.get("research_history", []) if row.get("symbol") == symbol]
+    return recent_records(symbol=symbol)
 
 
 def _render_records(symbol: str) -> None:
@@ -154,13 +155,13 @@ def _render_records(symbol: str) -> None:
         return
     rows = []
     for result in records:
-        chief = result.get("chief_researcher", {})
+        chief = result.get("chief_researcher") or {}
         data = chief.get("data") or {}
         rows.append({"时间": result.get("created_at", "--"), "模式": analysis_mode_display(result.get("analysis_mode")),
                      "观点": chief_summary(result)["stance"] or "--",
                      "置信度": data.get("confidence", "--"),
                      "耗时": f"{result.get('elapsed_seconds', 0):.2f}s" if result.get("elapsed_seconds") else "--",
-                     "状态": "完成" if chief.get("success") else "失败"})
+                     "状态": STATUS_LABELS.get(result.get("status"), "--")})
     st.dataframe(rows, hide_index=True, width="stretch")
     selected = st.selectbox("展开历史报告", range(len(records)),
                             format_func=lambda index: f"{rows[index]['时间']}｜{rows[index]['模式']}｜{rows[index]['状态']}")
@@ -170,6 +171,16 @@ def _render_records(symbol: str) -> None:
 
 def _render_ai_workspace(ctx: dict, symbol: str, mode: str, snapshot=None) -> None:
     st.subheader("AI研究")
+    pending = st.session_state.get("pending_research_save")
+    if pending:
+        st.error("研究结果尚未写入历史。请重试保存，无需重新研究。")
+        if st.button("重试保存研究结果"):
+            try:
+                publish_result(st.session_state, pending)
+                st.session_state.pop("pending_research_save", None)
+                st.rerun()
+            except HistorySaveError:
+                st.error("保存仍未成功，请检查磁盘空间和写入权限。")
     if snapshot is None:
         st.caption("当前行情不可用；案例匹配需要当前 Fact Bundle，静态报告示例仍可查看。")
     else:
@@ -191,7 +202,7 @@ def _render_ai_workspace(ctx: dict, symbol: str, mode: str, snapshot=None) -> No
 
     controls = st.columns([1.1, 1.1, 1.5, 4], gap="small")
     with controls[0]:
-        start_clicked = st.button("开始AI研究", type="primary", disabled=snapshot is None,
+        start_clicked = st.button("开始AI研究", type="primary", disabled=snapshot is None or bool(pending),
                                   width="stretch")
     with controls[1]:
         preview_clicked = st.button("预览案例匹配", disabled=snapshot is None, width="stretch")
@@ -217,9 +228,11 @@ def _render_ai_workspace(ctx: dict, symbol: str, mode: str, snapshot=None) -> No
             run_ctx = {**ctx, "few_shot_run_enabled": case_enabled}
             result = _run_research(run_ctx, symbol, ai_mode, facts)
             result.setdefault("few_shot_requested", case_enabled)
-            st.session_state.last_research = result
-            st.session_state.setdefault("research_history", []).insert(0, result)
+            publish_result(st.session_state, result)
             st.session_state["ai_case_enhancement_reset_pending"] = True
+        except HistorySaveError as exc:
+            st.session_state["pending_research_save"] = exc.record
+            st.error(str(exc))
         except Exception as exc:
             message, detail = safe_error(str(exc))
             st.error("AI研究失败")

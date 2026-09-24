@@ -1,4 +1,5 @@
 import html
+from ui.research_history import recent_records
 import streamlit as st
 
 from ui.view_models import analysis_mode_display, cn_change_color, display_value, format_amount, format_number
@@ -55,7 +56,7 @@ def _ai_panel(ctx):
         ready = state not in ("working", "error")
         css, text = ("dot-ok", "就绪") if ready else ("dot-warn", "运行中" if state == "working" else "异常")
         parts.append(f"<div class='ai-line'><span>{label}</span><b class='{css}'>● {text}</b></div>")
-    records = st.session_state.get("research_history", [])
+    records = recent_records(limit=1)
     parts.append("<div style='padding-top:7px;font-size:12px;color:#667085'>最近研究</div>")
     parts.append("<div style='font-size:12px;padding-top:4px'>暂无研究记录</div>" if not records else
                  f"<div style='font-size:12px;padding-top:4px'>{html.escape(records[0].get('symbol','--'))}　{analysis_mode_display(records[0].get('analysis_mode'))}</div>")
@@ -84,4 +85,4 @@ def render(ctx: dict) -> None:
         with st.container(border=True): _market_panel(status, rows)
         with st.container(border=True): _ai_panel(ctx)
     st.markdown("<div class='side-panel-title' style='margin-top:7px'>最近AI研究</div>", unsafe_allow_html=True)
-    if not st.session_state.get("research_history"): st.caption("暂无研究记录")
+    if not recent_records(limit=1): st.caption("暂无研究记录")

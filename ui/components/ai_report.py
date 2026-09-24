@@ -87,7 +87,7 @@ def render_ai_report(result: dict) -> None:
         if detail:
             with st.expander("展开开发日志"):
                 st.code(detail)
-        return
+        # A failed Chief must not hide saved specialist results or their statuses.
 
     st.markdown(_headline(view), unsafe_allow_html=True)
     st.markdown(_data_strip(view), unsafe_allow_html=True)

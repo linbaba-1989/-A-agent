@@ -8,6 +8,7 @@ from src.few_shot_features import ROLES
 from ui.components.ai_report import render_ai_report
 from ui.view_models import analysis_mode_display
 from ui.research_view import configured_models, model_display
+from ui.research_history import recent_records, STATUS_LABELS
 
 ARENA_ROLES = {"技术": "technical_analyst", "基本面": "fundamental_event_analyst",
                "情绪": "sentiment_analyst", "风险": "risk_officer", "总研究员": "chief_researcher"}
@@ -105,15 +106,15 @@ def render(ctx: dict) -> None:
     _render_capabilities(ctx)
     history_tab, arena_tab = st.tabs(["研究记录", "模型竞技场"])
     with history_tab:
-        records = st.session_state.get("research_history", [])
+        records = recent_records()
         if not records:
             st.caption("暂无正式研究记录。可从个股研究页启动，或先查看本地示例报告。")
         else:
             options = []
             for index, row in enumerate(records):
-                chief = row.get("chief_researcher", {})
+                chief = row.get("chief_researcher") or {}
                 confidence = (chief.get("data") or {}).get("confidence", "--")
-                options.append(f"{row.get('symbol')}｜{analysis_mode_display(row.get('analysis_mode'))}｜置信度 {confidence}｜{'完成' if chief.get('success') else '失败'}")
+                options.append(f"{row.get('created_at', '--')}｜{row.get('symbol')}｜{analysis_mode_display(row.get('analysis_mode'))}｜置信度 {confidence}｜{STATUS_LABELS.get(row.get('status'), '--')}")
             selected = st.selectbox("研究记录", range(len(options)), format_func=lambda index: options[index])
             render_ai_report(records[selected])
         if st.button("预览新版研究报告", key="academy_report_preview"):
