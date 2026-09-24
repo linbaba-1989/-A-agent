@@ -1,6 +1,7 @@
 """Presentation-only workforce adapters; no model calls or schema changes."""
 import math
 import re
+from collections.abc import Mapping
 from ui.view_models import analysis_mode_display
 
 ROLES = {"technical_analyst": "技术分析", "fundamental_event_analyst": "基本面 / 事件",
@@ -27,11 +28,44 @@ def present(value):
 
 
 def result_rows(result):
-    return {**(result.get("employees") or {}), "chief_researcher": result.get("chief_researcher") or {}}
+    result = result if isinstance(result, Mapping) else {}
+    employees = result.get("employees")
+    employees = employees if isinstance(employees, Mapping) else {}
+    return {**{role: row if isinstance(row, Mapping) else {} for role, row in employees.items()},
+            "chief_researcher": result.get("chief_researcher") if isinstance(result.get("chief_researcher"), Mapping) else {}}
+
+
+_CHIEF_ALIASES = {"short_term_view": "short_term", "mid_term_view": "mid_term",
+                  "trend_state": "trend", "risk_level": "risk"}
+_OPTIONAL_LISTS = ("key_drivers", "key_risks", "key_conflicts", "invalidation_conditions",
+                   "missing_evidence", "evidence")
+
+
+def adapt_research_result(result):
+    """Normalize saved report shapes for UI only; never infer a missing fact."""
+    source = result if isinstance(result, Mapping) else {}
+    rows = result_rows(source)
+    chief_row = rows["chief_researcher"]
+    chief_data = chief_row.get("data")
+    chief_data = dict(chief_data) if isinstance(chief_data, Mapping) else {}
+    for current, legacy in _CHIEF_ALIASES.items():
+        if current not in chief_data and legacy in chief_data:
+            chief_data[current] = chief_data[legacy]
+    for key in _OPTIONAL_LISTS:
+        if not isinstance(chief_data.get(key), list):
+            chief_data[key] = []
+    if "final_summary" not in chief_data and "summary" in chief_data:
+        chief_data["final_summary"] = chief_data["summary"]
+    employees = {role: {**row, "data": dict(row.get("data")) if isinstance(row.get("data"), Mapping) else {}}
+                 for role, row in rows.items() if role != "chief_researcher"}
+    return {**source, "employees": employees,
+            "chief_researcher": {**chief_row, "data": chief_data}}
 
 
 def data_status(role, facts, row=None):
     data = (row or {}).get("data") or {}
+    data = data if isinstance(data, Mapping) else {}
+    facts = facts if isinstance(facts, Mapping) else None
     values = [present((facts or {}).get(key)) for key in ROLE_FIELDS[role]]
     status = "available" if all(values) else "partial" if any(values) else "unavailable"
     explicit = data.get("data_status")
@@ -47,6 +81,7 @@ def data_status(role, facts, row=None):
 
 
 def workforce_data(result):
+    result = result if isinstance(result, Mapping) else {}
     rows = result_rows(result)
     statuses = {role: data_status(role, result.get("fact_data"), rows.get(role)) for role in ROLE_FIELDS}
     values = list(statuses.values())
@@ -96,7 +131,7 @@ def configured_models(ctx):
 
 
 def chief_summary(result):
-    chief = (result.get("chief_researcher") or {}).get("data") or {}
+    chief = adapt_research_result(result)["chief_researcher"]["data"]
     # The headline is a direct rendering of ChiefReport, including older saved
     # reports that did not yet have these fields. Do not infer a missing value.
     stance = chief.get("overall_view")
@@ -126,7 +161,7 @@ def chief_summary(result):
 
 def chief_conclusions(result):
     """Only existing ChiefReport conclusion fields, normalized for compact display."""
-    chief = (result.get("chief_researcher") or {}).get("data") or {}
+    chief = adapt_research_result(result)["chief_researcher"]["data"]
 
     def strings(key, text_key=None):
         values = chief.get(key)

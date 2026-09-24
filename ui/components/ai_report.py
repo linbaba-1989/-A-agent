@@ -80,8 +80,8 @@ def _list(title: str, values) -> None:
 
 def render_ai_report(result: dict) -> None:
     view = report_view(result)
-    chief_row = result.get("chief_researcher", {})
-    if not chief_row.get("success"):
+    chief_row = view.get("chief_row") or {}
+    if chief_row.get("success") is False:
         message, detail = safe_error(chief_row.get("error"))
         st.error(message)
         if detail:
@@ -93,8 +93,8 @@ def render_ai_report(result: dict) -> None:
     st.markdown(_data_strip(view), unsafe_allow_html=True)
     st.markdown(_conclusions(result), unsafe_allow_html=True)
 
-    chief = view["chief"]
-    employees = view["employees"]
+    chief = view.get("chief") or {}
+    employees = view.get("employees") or {}
     technical = (employees.get("technical_analyst", {}).get("data") or {})
     fundamental = (employees.get("fundamental_event_analyst", {}).get("data") or {})
     sentiment = (employees.get("sentiment_analyst", {}).get("data") or {})
@@ -113,4 +113,4 @@ def render_ai_report(result: dict) -> None:
         with tabs[3]: st.write(risk.get("summary") or "--")
     st.caption("AI分析仅用于研究辅助，不构成投资建议。")
     with st.expander("查看原始分析数据", expanded=raw_json_expanded_default()):
-        st.json(view["raw"])
+        st.json(view.get("raw") or {})

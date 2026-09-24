@@ -205,12 +205,13 @@ def apply_realtime_quote_status(status: dict[str, Any], current_timestamp: Any,
 
 
 def report_view(result: dict[str, Any]) -> dict[str, Any]:
-    from ui.research_view import chief_summary, workforce_data
-    chief = result.get("chief_researcher", {})
-    data = chief.get("data") or {}
-    summary = chief_summary(result)
-    return {**summary, "data_levels": workforce_data(result),
-            "chief": data, "employees": result.get("employees", {}), "raw": result}
+    from ui.research_view import adapt_research_result, chief_summary, workforce_data
+    adapted = adapt_research_result(result)
+    summary = chief_summary(adapted)
+    return {**summary, "data_levels": workforce_data(adapted),
+            "chief_row": adapted["chief_researcher"],
+            "chief": adapted["chief_researcher"]["data"],
+            "employees": adapted["employees"], "raw": result}
 
 
 def raw_json_expanded_default() -> bool:
