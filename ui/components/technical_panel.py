@@ -30,7 +30,7 @@ def render_technical_panel(facts: dict) -> None:
                  "<div class='side-panel-title tech-section'>量价</div>",
                  _row("今日成交额", format_amount(facts.get("amount"))),
                  _row("换手率 / 量比", f"{_shown(facts.get('turnover_rate'), '%')} / {_shown(facts.get('volume_ratio'))}"),
-                 _row("成交量", f"{format_number(facts.get('volume'), 0)} 手"),
+                 _row("成交量", f"{format_number(facts.get('volume'), 0)} " + ("股" if facts.get("volume_unit") == "shares" else "手")),
                  "<div class='side-panel-title tech-section'>分钟涨速</div>",
                  _row("1m / 3m / 5m", " / ".join(_shown(facts.get(f"speed_{minute}m"), "%") for minute in (1, 3, 5)))])
     if facts.get("market_status") != "open":

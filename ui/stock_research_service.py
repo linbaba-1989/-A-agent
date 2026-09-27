@@ -57,6 +57,8 @@ def select_research_symbol(session: dict[str, Any], symbol: str) -> None:
 
 
 def _history_dates(frame: pd.DataFrame) -> pd.Series:
+    if isinstance(frame.index, pd.DatetimeIndex):
+        return pd.Series(frame.index, index=frame.index)
     index = pd.Series(frame.index, index=frame.index)
     text = index.astype(str).str.replace(r"\.0$", "", regex=True)
     trading_dates = pd.to_datetime(text, format="%Y%m%d", errors="coerce")
@@ -77,7 +79,7 @@ def prepare_history(frame: pd.DataFrame | None) -> pd.DataFrame:
     for field in ("open", "high", "low", "close", "volume", "amount"):
         if field in result:
             result[field] = pd.to_numeric(result[field], errors="coerce")
-    return result.sort_values("date").reset_index(drop=True)
+    return result.reset_index(drop=True).sort_values("date").reset_index(drop=True)
 
 
 @dataclass
@@ -116,8 +118,8 @@ class StockResearchService:
         last = tick.get("lastPrice", UNAVAILABLE)
         turnover = validated_turnover(tick, detail)
         recent20 = history.tail(20)
-        high20 = recent20["high"].max() if "high" in recent20 and not recent20.empty else UNAVAILABLE
-        low20 = recent20["low"].min() if "low" in recent20 and not recent20.empty else UNAVAILABLE
+        high20 = float(recent20["high"].max()) if "high" in recent20 and not recent20.empty else UNAVAILABLE
+        low20 = float(recent20["low"].min()) if "low" in recent20 and not recent20.empty else UNAVAILABLE
         averages = {f"ma{window}": realtime_ma(closes, last, window) for window in (5, 10, 20, 60)}
         atr = indicators.get("atr14", UNAVAILABLE)
         atr_pct = (round(float(atr) / float(last) * 100, 2)
@@ -147,8 +149,16 @@ class StockResearchService:
             "speed_5m": market_speed(self.scanner.snapshot_history.speed(symbol, 5), market_status),
             "fundamental_data": UNAVAILABLE, "event_data": UNAVAILABLE, "announcement_data": UNAVAILABLE,
             "news_data": UNAVAILABLE, "industry_data": UNAVAILABLE, "sentiment_external_data": UNAVAILABLE,
-            "source": "QMT/xtquant",
+            "source": tick.get("source", "QMT/xtquant"),
         }
+        if hasattr(self.provider, "provenance"):
+            facts.update(self.provider.provenance(symbol, tick, raw_history))
+            facts["market_status"] = "open" if tick.get("quote_status") == "LIVE" else "closed"
+            facts["volume_unit"] = "shares"
+            facts["amount_unit"] = "CNY"
+            facts["industry_data"] = self.provider.get_stock_sectors(symbol)
+            facts["total_market_cap"] = tick.get("total_market_cap")
+            facts["float_market_cap"] = tick.get("float_market_cap")
         quote = {**tick, "timestamp": quote_time, "name": facts["name"],
                  "turnover_rate": facts["turnover_rate"], "amplitude": amplitude}
         return StockResearchSnapshot(symbol, quote, facts, history, perf_counter() - started)

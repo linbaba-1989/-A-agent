@@ -24,7 +24,11 @@ def source_request(state, environ):
     # Neither a legacy source lock nor allocation tracing opts users into tests.
     lock = "xtdatacenter" if acceptance_mode(state, environ) else None
     preferred = "xtdatacenter" if lock else state.get("market_source", "auto")
-    if preferred not in {"auto", "xtdatacenter", "qmt"}:
+    if not lock:
+        mode = environ.get("A_AGENT_MARKET_DATA_MODE", "auto").strip().lower()
+        if mode in {"hybrid", "xtdc", "qmt"}:
+            preferred = {"xtdc": "xtdatacenter"}.get(mode, mode)
+    if preferred not in {"auto", "hybrid", "xtdatacenter", "qmt"}:
         raise ValueError("unsupported_market_source")
     return SourceRequest(preferred, lock)
 

@@ -122,9 +122,15 @@ def render(ctx: dict) -> None:
         market_quote_time = timestamp_to_beijing(current_timestamp)
         market_quote_time_text = (market_quote_time.replace(tzinfo=None).isoformat(timespec="seconds")
                                   if market_quote_time else display_value(None))
-        st.markdown(f"<div class='index-strip'><b>上证　--</b><b>深证　--</b><b>创业板　--</b>"
-                    f"<span class='{badge}'>{state} ●</span><span>行情时间：{market_quote_time_text}</span></div>",
-                    unsafe_allow_html=True)
+        if getattr(ctx.get("provider"), "hybrid", False):
+            from ui.components.hybrid_status import render_indices, render_hybrid_status
+            render_indices(ctx["provider"], background=True)
+            render_hybrid_status(ctx["provider"])
+            st.caption(f"{state} · 行情时间：{market_quote_time_text}")
+        else:
+            st.markdown(f"<div class='index-strip'><b>上证　--</b><b>深证　--</b><b>创业板　--</b>"
+                        f"<span class='{badge}'>{state} ●</span><span>行情时间：{market_quote_time_text}</span></div>",
+                        unsafe_allow_html=True)
         left, right = st.columns([4, 1], gap="small")
         with left: _table(ranked)
         with right:

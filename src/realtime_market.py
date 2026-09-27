@@ -186,7 +186,7 @@ class RealtimeMarketFeed:
         Reservation precedes I/O, including failures and concurrent viewers.
         A restored snapshot is displayed by the SSE adapter before this call.
         """
-        if should_fetch_quotes(session) or not self._token_source:
+        if should_fetch_quotes(session) or not (self._token_source or getattr(self.provider, "hybrid", False)):
             return self.cached()
         key = (to_beijing(now).date(), session)
         with self._closed_probe_lock:
@@ -351,11 +351,17 @@ class RealtimeMarketFeed:
                              "speed_3m": self.buffer.speed(symbol, 3),
                              "speed_5m": self.buffer.speed(symbol, 5), "turnover_rate": turnover,
                              "amount": tick.get("amount", UNAVAILABLE), "volume": tick.get("volume", UNAVAILABLE),
+                             "volume_unit": tick.get("volume_unit", "lots"),
+                             "volume_ratio": tick.get("volume_ratio"),
                              "high": tick.get("high", UNAVAILABLE), "low": tick.get("low", UNAVAILABLE),
                              "open": tick.get("open", UNAVAILABLE),
                              "quote_time": quote_moment.replace(tzinfo=None).isoformat(timespec="seconds"),
                              "quote_timestamp": timestamp, "snapshot_seq": self.snapshot_seq,
-                             "source": getattr(self.provider, "provider_name", None),
+                             "source": tick.get("source", getattr(self.provider, "provider_name", None)),
+                             "quote_status": tick.get("quote_status"),
+                             "field_provenance": tick.get("field_provenance", {}),
+                             "total_market_cap": tick.get("total_market_cap"),
+                             "float_market_cap": tick.get("float_market_cap"),
                              "source_fetch_time": source_fetch_time, "from_cache": False})
                 cached_row = previous_rows.get(symbol, {})
                 if (not should_fetch_quotes(market_session)

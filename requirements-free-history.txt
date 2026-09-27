@@ -1,0 +1,3 @@
+# Optional SDKs for the isolated free historical worker; Production requirements unchanged.
+akshare==1.18.97
+baostock==0.9.4

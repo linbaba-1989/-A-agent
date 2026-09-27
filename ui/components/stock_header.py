@@ -32,7 +32,8 @@ def render_stock_header(symbol: str, quote: dict, name: str = "", market_status:
         value = quote.get(field)
         if field == "amount": shown = format_amount(value)
         elif field == "volume":
-            try: shown = f"{float(value) / 10_000:.2f}万手" if abs(float(value)) >= 10_000 else f"{float(value):.0f}手"
+            unit = "股" if quote.get("volume_unit") == "shares" else "手"
+            try: shown = f"{float(value) / 10_000:.2f}万{unit}" if abs(float(value)) >= 10_000 else f"{float(value):.0f}{unit}"
             except (TypeError, ValueError): shown = "--"
         elif field in ("turnover_rate", "amplitude"):
             shown = format_number(value); shown = shown if shown == "--" else shown + "%"

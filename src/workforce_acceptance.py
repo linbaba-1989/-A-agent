@@ -45,6 +45,13 @@ def build_fact_bundle(symbol: str = "600498.SH", provider: QMTProvider | None = 
     """Read QMT once and create the immutable input shared by every role and mode."""
     provider = provider or QMTProvider()
     scanner = scanner or MarketScanner(provider)
+    if getattr(provider, "hybrid", False):
+        from ui.stock_research_service import StockResearchService
+        snapshot = StockResearchService(provider, scanner, {}).load(symbol, 120)
+        return {**snapshot.facts, "fact_classification": "CONFIRMED_FACT",
+                "recent_daily_k": json.loads(snapshot.history.tail(20).to_json(orient="records", date_format="iso")),
+                "quote_type": "realtime_snapshot" if snapshot.facts.get("quote_status") == "LIVE"
+                else "latest_available_snapshot"}
     tick = provider.get_full_ticks([symbol]).get(symbol)
     if not tick or not provider._valid_tick(tick):
         raise RuntimeError(f"qmt_quote_unavailable: {symbol}")

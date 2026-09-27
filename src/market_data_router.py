@@ -33,10 +33,15 @@ class MarketDataRouter:
                preferred_source: str = "auto") -> MarketDataSelection:
         if acceptance_source not in {None, "xtdatacenter"}:
             raise ValueError("unsupported_acceptance_source")
-        if preferred_source not in {"auto", "xtdatacenter", "qmt"}:
+        if preferred_source not in {"auto", "hybrid", "xtdatacenter", "qmt"}:
             raise ValueError("unsupported_market_source")
         if acceptance_source == "xtdatacenter" or preferred_source == "xtdatacenter":
             return self._select_token_only(acceptance_source is not None)
+        if preferred_source == "hybrid":
+            from .market_data.hybrid_provider import HybridMarketDataProvider
+            self.selection = MarketDataSelection(HybridMarketDataProvider(), "Hybrid", "connected", False,
+                                                qmt_fallback_status="disabled / unavailable")
+            return self.selection
         if preferred_source == "qmt":
             qmt_provider = self.qmt_factory()
             diagnostic = qmt_provider.connection_diagnostics()

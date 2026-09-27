@@ -61,9 +61,11 @@ market_router, market_selection = source_resources.router, source_resources.sele
 market_scanner, realtime_feed = source_resources.scanner, source_resources.feed
 provider = market_selection.provider
 audit = getattr(provider, "universe_audit", None) if provider else None
-audit = audit or persisted_audit()
+audit = audit or (None if getattr(provider, "hybrid", False) else persisted_audit())
 clock_now = beijing_now()
-status = public_market_status(market_selection, audit, now=clock_now)
+hybrid_calendar = provider.get_calendar() if getattr(provider, "hybrid", False) else None
+status = public_market_status(market_selection, audit, now=clock_now,
+                              **({"calendar": hybrid_calendar} if hybrid_calendar else {}))
 
 # A persisted universe audit is useful for counts, but its market status and
 # quote timestamp are not a clock.  On startup/entry to auction or continuous
@@ -93,14 +95,23 @@ elif realtime_feed:
                                       market_session_value=status["market_session"])
     st.session_state.realtime_quote_status = status["quote_status"]
     st.session_state.realtime_last_quote_time = status["last_quote_time"]
+if getattr(provider, "hybrid", False):
+    current_audit = provider.universe_audit
+    status.update(raw_universe=current_audit["raw_count"], active_universe=current_audit["active_count"],
+                  valid_quotes=current_audit["valid_tick_count"])
 ctx = {"router": market_router, "selection": market_selection, "provider": provider,
        "scanner": market_scanner, "available": provider is not None, "status": status,
        "realtime_feed": realtime_feed,
        "source_resources": source_resources, "source_request": requested_source,
        "acceptance_mode": acceptance_mode(st.session_state, os.environ),
        "workforce": workforce_resource(), "registry": ModelRegistry(), "routes": load_role_config()}
+if hybrid_calendar:
+    ctx["market_calendar"] = hybrid_calendar
 
 page = render_sidebar()
+if getattr(provider, "hybrid", False):
+    from ui.components.hybrid_status import render_hybrid_status
+    hybrid_status_slot = st.empty()
 symbol, analysis_mode, topbar_status_slot = render_topbar(status)
 status_strip_slot = st.empty()
 ctx["status_slots"] = {"topbar": topbar_status_slot, "status_strip": status_strip_slot}
@@ -128,3 +139,6 @@ elif page == "设置":
     settings.render(ctx)
 if not ctx.get("streaming_status_owned"):
     render_status_strip(status, target=status_strip_slot)
+if getattr(provider, "hybrid", False):
+    with hybrid_status_slot.container():
+        render_hybrid_status(provider)

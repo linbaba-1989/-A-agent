@@ -40,6 +40,13 @@ class HistoricalDataService:
 
     def _store(self, payload: dict[str, pd.DataFrame] | None) -> None:
         for symbol, frame in (payload or {}).items():
+            if getattr(self.provider, "hybrid", False) and isinstance(frame, pd.DataFrame):
+                # A routed series replaces the old series, including its quality/source.
+                # Never keep a longer stale source merely because fallback is shorter.
+                self.frames[symbol] = frame
+                for key in [key for key in self._indicator_cache if key[0] == symbol]:
+                    self._indicator_cache.pop(key, None)
+                continue
             if isinstance(frame, pd.DataFrame) and not frame.empty:
                 previous = self.frames.get(symbol)
                 if previous is None or len(frame) >= len(previous):
@@ -86,6 +93,9 @@ class HistoricalDataService:
             raise
 
     def ensure(self, symbol: str, count: int = 250) -> pd.DataFrame:
+        if getattr(self.provider, "hybrid", False):
+            self._store(self.provider.get_history([symbol], "1d", count))
+            return self.frames.get(symbol, pd.DataFrame())
         current = self.frames.get(symbol)
         if self._usable(current) and len(current) >= count:
             return current
@@ -105,6 +115,8 @@ class HistoricalDataService:
         frame = self.frames.get(symbol)
         if not isinstance(frame, pd.DataFrame) or frame.empty:
             return "history_unavailable"
+        if getattr(self.provider, "hybrid", False) and frame.attrs.get("quality_status") != "VALID":
+            return "history_degraded"
         if len(frame) < minimum_bars:
             return "insufficient_history"
         return "available"

@@ -57,7 +57,7 @@ def _workspace_data_facts(snapshot) -> dict | None:
     facts = dict(snapshot.facts)
     history = getattr(snapshot, "history", None)
     if "recent_daily_k" not in facts and history is not None and not history.empty:
-        facts["recent_daily_k"] = history.tail(20).to_dict(orient="records")
+        facts["recent_daily_k"] = json.loads(history.tail(20).to_json(orient="records", date_format="iso"))
     return facts
 
 
@@ -291,6 +291,12 @@ def render(ctx: dict, symbol: str, mode: str) -> None:
     watchlist = st.session_state.setdefault("watchlist", ["600498.SH"])
     heading, action = st.columns([7, 1])
     heading.caption(f"基础行情加载 {snapshot.load_seconds:.2f}s｜Provider 实例复用")
+    if getattr(ctx["provider"], "hybrid", False):
+        from ui.components.hybrid_status import render_memberships
+        render_memberships(ctx["provider"], symbol)
+        st.caption(f"实时：{snapshot.facts['realtime_source']} ｜ 日K：{snapshot.facts['history_source']} "
+                   f"/ {snapshot.facts['history_adjustment']} / {snapshot.facts['history_quality']} "
+                   f"｜ 证券资料：{snapshot.facts['reference_source']}")
     watched = symbol in watchlist
     if action.button("★ 已自选" if watched else "☆ 加入自选", width="stretch"):
         toggle_watchlist(watchlist, symbol); st.rerun()

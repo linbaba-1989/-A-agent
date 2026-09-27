@@ -81,6 +81,12 @@ def infer_volume_unit(samples: list[tuple[dict[str, Any], dict[str, Any]]]) -> t
 
 def validated_turnover(tick: dict[str, Any], instrument: dict[str, Any], tolerance: float = 0.01) -> dict[str, Any]:
     """Cross-check QMT lots and shares fields before exposing turnover."""
+    if tick.get("volume_unit") == "shares":
+        # Normalized adapters supply native turnover, not QMT lot/share pairs.
+        value = tick.get("turnover_rate")
+        return {"value": value if value is not None else UNAVAILABLE,
+                "status": "source_reported:" + tick.get("source", "unknown") if value is not None else "unavailable",
+                "volume_formula": UNAVAILABLE, "pvolume_formula": UNAVAILABLE, "difference": UNAVAILABLE}
     try:
         float_volume = float(instrument["float_volume"])
         by_volume = float(tick["volume"]) * 100 / float_volume * 100

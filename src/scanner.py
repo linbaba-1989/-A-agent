@@ -83,6 +83,10 @@ class MarketScanner:
         self.history_init_seconds = perf_counter() - started
 
     def validate_volume_unit(self, ticks: dict[str, dict[str, Any]]) -> None:
+        if getattr(self.provider, "hybrid", False):
+            self.volume_field, self.volume_multiplier = "volume", 1.0
+            self.volume_unit_evidence = [{"contract": "normalized_shares"}]
+            return
         samples = []
         for code in ("600000.SH", "000001.SZ", "600519.SH"):
             if code in ticks and code in self.instrument_cache:
@@ -165,6 +169,10 @@ class MarketScanner:
         tick_started = perf_counter()
         ticks = self._ticks()
         full_tick_seconds = perf_counter() - tick_started
+        if getattr(self.provider, "hybrid", False):
+            self.history_service._store({s: r.frame() for s, r in list(self.provider._history.items()) if r.bars})
+            candidates = sorted(ticks, key=lambda s: float(ticks[s].get("amount") or 0), reverse=True)
+            self.provider.queue_history([s for s in candidates if self.history_service.reason(s) != "available"])
         if self.volume_field is None:
             self.validate_volume_unit(ticks)
         counts = {"suspended": 0, "resumed_today": 0, "unknown": 0, "invalid_quote": 0}
@@ -209,7 +217,12 @@ class MarketScanner:
                 "history_status": self.history_service.reason(symbol),
                 "suspendFlag": suspend_flag, "stockStatus": tick.get("stockStatus"), "openInt": tick.get("openInt"),
                 "instrument_status": instrument.get("instrument_status"), "is_trading": instrument.get("is_trading"),
-                "source": "QMT/xtquant",
+                "source": tick.get("source", "QMT/xtquant"),
+                "quote_status": tick.get("quote_status"),
+                "history_source": self.history_service.frame(symbol).attrs.get("source"),
+                "field_provenance": tick.get("field_provenance", {}),
+                "total_market_cap": tick.get("total_market_cap"),
+                "float_market_cap": tick.get("float_market_cap"),
             }
             row.update(calculate_score(row))
             rows.append(row)
@@ -223,7 +236,8 @@ class MarketScanner:
         except Exception:
             memory_mb = None
         diagnostic = MarketDiagnostics(
-            connected=True, xtquant_path=connection.xtquant_path, xtquant_imported=True, rpc_request_success=True,
+            connected=True, xtquant_path=connection.xtquant_path,
+            xtquant_imported=not getattr(self.provider, "hybrid", False), rpc_request_success=True,
             full_tick_success=True, process_detected=connection.process_detected, processes=connection.processes,
             python_version=connection.python_version, stock_pool_size=len(self.universe),
             sh_count=sum(code.endswith(".SH") for code in self.universe), sz_count=sum(code.endswith(".SZ") for code in self.universe),

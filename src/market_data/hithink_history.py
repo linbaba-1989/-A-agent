@@ -111,6 +111,15 @@ class HithinkHistoryProvider:
                     cached.quality_status="DEGRADED"
                     result=cached
             result.bars=result.bars[-count:]
+            # Validate the requested tail, not discarded fetch slack outside the
+            # official rolling calendar. Keep every gap inside the returned series.
+            if (len(result.bars) == count and result.bars[-1].trade_date == target
+                    and result.warnings and all(w.startswith("missing_session:") for w in result.warnings)
+                    and all(w.split(":", 1)[1] < result.bars[0].trade_date.isoformat() for w in result.warnings)):
+                result=validate(result.bars,symbol,self.name,adjustment,
+                                result.bars[0].trade_date,target,now,self.calendar)
+                if network:
+                    self.cache.write(result,kind,self.endpoint,now)
             if result.bars and (len(result.bars)<count or result.bars[-1].trade_date<target):
                 if result.data_status!="CACHED":
                     result.data_status="PARTIAL"

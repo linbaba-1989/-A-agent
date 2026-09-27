@@ -65,8 +65,12 @@ def _ai_panel(ctx):
 
 def render(ctx: dict) -> None:
     status, rows = ctx["status"], st.session_state.get("scan_rows", [])
-    st.markdown("<div class='index-strip'><b>上证　--</b><b>深证　--</b><b>创业板　--</b>"
-                "<span style='color:#98a2b3'>指数数据暂未接入</span></div>", unsafe_allow_html=True)
+    if getattr(ctx.get("provider"), "hybrid", False):
+        from ui.components.hybrid_status import render_indices
+        render_indices(ctx["provider"])
+    else:
+        st.markdown("<div class='index-strip'><b>上证　--</b><b>深证　--</b><b>创业板　--</b>"
+                    "<span style='color:#98a2b3'>指数数据暂未接入</span></div>", unsafe_allow_html=True)
     elapsed = st.session_state.get("last_scan_elapsed")
     elapsed = f"{elapsed:.2f}s" if isinstance(elapsed, (int, float)) else "--"
     latest = str(status["last_quote_time"]).replace("T", " ")
