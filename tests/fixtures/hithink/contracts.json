@@ -1,0 +1,53 @@
+{
+  "timestamp": 1790254800000,
+  "tickers": [
+    {
+      "thscode": "600498.SH",
+      "ticker": "600498",
+      "name": "fixture-name",
+      "exchange": "SH",
+      "asset_type": "a-share",
+      "currency": "CNY",
+      "list_date": "2001-08-23"
+    }
+  ],
+  "snapshot": [
+    {
+      "thscode": "600498.SH",
+      "ticker": "600498",
+      "last_price": 41.08,
+      "prev_price": 42.54,
+      "open_price": 42.19,
+      "high_price": 42.5,
+      "low_price": 41.06,
+      "price_change": -1.46,
+      "price_change_ratio_pct": -3.432,
+      "volume": 41878716,
+      "turnover": 1740050357.25
+    }
+  ],
+  "history": [
+    {
+      "date_ms": 1790179200000,
+      "open_price": 42.19,
+      "high_price": 42.5,
+      "low_price": 41.06,
+      "close_price": 41.08,
+      "volume": 41878716,
+      "turnover": 1740050357.25
+    }
+  ],
+  "catalog": [
+    {
+      "thscode": "881101.TI",
+      "name": "fixture-industry"
+    }
+  ],
+  "members": [
+    {
+      "thscode": "600498.SH",
+      "ticker": "600498",
+      "name": "fixture-name"
+    }
+  ]
+}

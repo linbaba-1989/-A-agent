@@ -7,7 +7,7 @@ ENV_NAME = "A_AGENT_MARKET_DATA_MODE"
 
 def market_data_mode(environ=None):
     mode = (os.environ if environ is None else environ).get(ENV_NAME, "auto").strip().lower()
-    if mode not in {"auto", "free", "xtdc", "qmt"}:
+    if mode not in {"auto", "hithink", "free", "xtdc", "qmt"}:
         raise ValueError("unsupported_market_data_mode")
     return mode
 
@@ -17,6 +17,9 @@ def create_market_provider(*, mode=None, environ=None, free_factory=FreeMarketDa
     selected = market_data_mode({ENV_NAME: mode}) if mode is not None else market_data_mode(environ)
     if selected == "free":
         return free_factory()  # No import or construction of paid providers.
+    if selected == "hithink":
+        from .hithink_provider import HithinkOfficialProvider
+        return HithinkOfficialProvider()
     if router_factory is None:
         from ..market_data_router import MarketDataRouter
         router_factory = MarketDataRouter

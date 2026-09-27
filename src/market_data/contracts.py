@@ -5,9 +5,10 @@ import re
 import math
 
 
-def canonical_symbol(value: str) -> str:
+def canonical_symbol(value: str, *, allow_index: bool = False) -> str:
     symbol = value.strip().upper()
-    if not re.fullmatch(r"\d{6}\.(SH|SZ|BJ)", symbol):
+    pattern = r"\d{6}\.(SH|SZ|BJ|TI)" if allow_index else r"\d{6}\.(SH|SZ|BJ)"
+    if not re.fullmatch(pattern, symbol):
         raise ValueError("canonical_symbol_required")
     return symbol
 
@@ -34,7 +35,7 @@ class MarketSnapshot:
     quote_status: str = "UNAVAILABLE"
 
     def __post_init__(self):
-        object.__setattr__(self, "symbol", canonical_symbol(self.symbol))
+        object.__setattr__(self, "symbol", canonical_symbol(self.symbol, allow_index=True))
         for name in ("price", "prev_close", "open", "high", "low", "change", "pct_change",
                      "volume_shares", "amount_cny", "turnover_rate", "volume_ratio",
                      "total_market_cap", "float_market_cap"):
