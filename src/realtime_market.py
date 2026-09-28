@@ -13,6 +13,7 @@ from .compact_market_history import CompactMarketHistory, RealtimePoint, Realtim
 from .indicators import UNAVAILABLE, percent_change
 from .market_cache import normalize_instrument, validated_turnover
 from .last_valid_snapshot import DEFAULT_PATH, TOKEN_SOURCE, LastValidSnapshot
+from .realtime_presentation import feed_mode, provenance, presentation_rows
 from .market_clock import (OPEN, QuoteEvidence, should_fetch_quotes, timestamp_to_beijing, to_beijing,
                            quote_status as market_quote_status)
 
@@ -212,10 +213,29 @@ class RealtimeMarketFeed:
         return []
 
     def _provider_valid_tick(self, tick: dict[str, Any] | None, require_time: bool = True) -> bool:
+        if not callable(getattr(self.provider, "_valid_tick", None)):
+            return bool(tick and _float(tick.get("lastPrice")) and float(tick["lastPrice"]) > 0
+                        and (not require_time or tick.get("time")) and tick.get("quote_status") != "UNAVAILABLE")
         try:
             return bool(self.provider._valid_tick(tick, require_time=require_time))
         except TypeError:
             return bool(self.provider._valid_tick(tick))
+
+    def _tick_timestamp(self, tick):
+        method = getattr(self.provider, "tick_timestamp", None)
+        return method(tick) if callable(method) else (tick.get("time") / 1000 if tick and tick.get("time") else None)
+
+    def _fetch_ticks(self, symbols):
+        method = getattr(self.provider, "get_full_ticks", None)
+        if callable(method):
+            return method(symbols)
+        batch = self.provider.snapshot(symbols)
+        return {s: dict(lastPrice=q.price, lastClose=q.prev_close, open=q.open, high=q.high, low=q.low,
+                       volume=q.volume_shares, amount=q.amount_cny, volume_unit="shares",
+                       time=q.quote_time.timestamp()*1000 if q.quote_time else None,
+                       source=q.source, quote_status=q.quote_status, turnover_rate=q.turnover_rate,
+                       volume_ratio=q.volume_ratio, total_market_cap=q.total_market_cap,
+                       float_market_cap=q.float_market_cap) for s, q in batch.snapshots.items()}
 
     def _record_snapshot_diagnostic(self, *, request_id: int | None, worker_request_ids: list[int],
                                     request_started_at: str | None, request_finished_at: str | None,
@@ -230,7 +250,7 @@ class RealtimeMarketFeed:
             if not isinstance(tick, dict):
                 continue
             raw_timestamp_fields[_raw_timestamp_field(tick)] += 1
-            timestamp = self.provider.tick_timestamp(tick)
+            timestamp = self._tick_timestamp(tick)
             if timestamp is not None:
                 raw_timestamps.append(float(timestamp))
             if self._provider_valid_tick(tick, require_time=True):
@@ -313,7 +333,7 @@ class RealtimeMarketFeed:
             request_id = self._next_diagnostic_request_id()
             request_started_at = to_beijing().isoformat(timespec="milliseconds")
             worker_before = getattr(getattr(self.provider, "backend", None), "_counter", None)
-            ticks = self.provider.get_full_ticks(selected)
+            ticks = self._fetch_ticks(selected)
             request_finished_at = to_beijing().isoformat(timespec="milliseconds")
             worker_after = getattr(getattr(self.provider, "backend", None), "_counter", None)
             self.snapshot_seq += 1
@@ -323,9 +343,9 @@ class RealtimeMarketFeed:
             latest = None
             for symbol in selected:
                 tick = ticks.get(symbol)
-                if not tick or not self.provider._valid_tick(tick):
+                if not tick or not self._provider_valid_tick(tick):
                     continue
-                timestamp = self.provider.tick_timestamp(tick)
+                timestamp = self._tick_timestamp(tick)
                 if timestamp is None:
                     continue
                 try:
@@ -373,6 +393,15 @@ class RealtimeMarketFeed:
                         value = _float(cached_row.get(field))
                         if rows[-1][field] == UNAVAILABLE and value is not None and math.isfinite(value):
                             rows[-1][field] = value
+            if feed_mode(self.provider) != "legacy":
+                for row in rows:
+                    row.update(provenance(self.provider, row["source"], row["quote_timestamp"]))
+                rows, _ = presentation_rows(self, rows, now)
+                # A new complete snapshot replaces the previous chain/date partition.
+                if symbols is None:
+                    self._latest_rows = {}
+                latest = market_quote_timestamp(rows)
+                self.last_quote_timestamp = latest
             self._latest_rows.update({row["symbol"]: row for row in rows
                                      if row["quote_timestamp"] >= self._latest_rows.get(
                                          row["symbol"], {}).get("quote_timestamp", 0)})

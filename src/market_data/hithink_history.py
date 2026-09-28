@@ -127,6 +127,10 @@ class HithinkHistoryProvider:
                     result.quality_status="DEGRADED"
                 result.warnings.append("insufficient_or_outdated_history")
             result.requested_end=target
+            # Persist the validated requested tail, including explicit session gaps.
+            # A cooldown must not turn a usable DEGRADED series into zero rows.
+            if network and result.data_status != "CACHED":
+                self.cache.write(result,kind,self.endpoint,now)
             result.latency=perf_counter()-started
             self.last_results[symbol]=result
             return result

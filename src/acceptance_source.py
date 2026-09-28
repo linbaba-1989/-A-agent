@@ -186,7 +186,8 @@ def shared_beta_feed(ctx):
     """No source selection here: only identity-checked access to the owner feed."""
     feed, selection = ctx.get("realtime_feed"), ctx["selection"]
     owner = ctx.get("source_resources")
-    if (feed is None or selection.name != TOKEN_SOURCE or selection.provider is not feed.provider
+    from .realtime_presentation import supports_realtime
+    if (feed is None or not supports_realtime(selection.provider) or selection.provider is not feed.provider
             or (owner is not None and (owner.feed is not feed or owner.selection is not selection))):
         return None
     return feed

@@ -19,6 +19,9 @@ def render_indices(provider, background=False):
                       None if quote is None or quote.pct_change is None else f"{quote.pct_change:+.2f}%")
             st.caption(f"Hithink · {quote.quote_status if quote else 'UNAVAILABLE'} · "
                        f"{quote.quote_time.isoformat() if quote and quote.quote_time else '--'}")
+            evidence = (getattr(batch, "provider_evidence", {}) or {}).get("index_observations", {}).get(symbol, {})
+            if evidence:
+                st.caption(f"{evidence.get('availability')} · 页级时间 {evidence.get('page_timestamp') or '--'}；非逐标的成交时间，未验证LIVE")
     if batch and batch.capability_status not in {"SUCCESS", "CACHED"}:
         st.caption("Index DEGRADED: " + batch.capability_status)
 

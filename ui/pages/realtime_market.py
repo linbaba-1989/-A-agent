@@ -11,6 +11,7 @@ from src.realtime_market import (SnapshotConsumerState, market_quote_timestamp, 
 from ui.components.market_status import render_status_strip
 from ui.components.topbar import render_topbar_status
 from ui.view_models import display_value, format_amount, format_number, quote_status_display
+from src.realtime_presentation import presentation_rows
 
 
 RANKINGS = {"涨幅榜": "change_pct", "跌幅榜": "change_pct_asc", "1分钟涨速": "speed_1m",
@@ -63,7 +64,10 @@ def render(ctx: dict) -> None:
         from ui.components.streaming_beta import render_streaming_beta
         render_streaming_beta(ctx)
         return
-    st.caption("行情快照轮询 · 全A默认2秒 · 所有变化来自当前行情源")
+    if getattr(ctx.get("provider"), "hybrid", False):
+        st.caption("行情快照轮询 · 全A更新周期以实测耗时为准 · 轮询间隔不代表数据时效")
+    else:
+        st.caption("行情快照轮询 · 全A默认2秒 · 所有变化来自当前行情源")
     choice = st.segmented_control("排行榜", list(RANKINGS), default="涨幅榜", label_visibility="collapsed") or "涨幅榜"
     top_n = st.segmented_control("显示数量", [20, 50], default=20, format_func=lambda value: f"Top {value}",
                                  label_visibility="collapsed") or 20
@@ -93,10 +97,13 @@ def render(ctx: dict) -> None:
             # Lunch/pre-open/closed may show the last real quote, but they do
             # not initiate a provider request.
             rows = feed.cached()
+        rows, boundary_status = presentation_rows(feed, rows, now)
         current_timestamp = market_quote_timestamp(rows, feed.last_quote_timestamp)
         display_status = quote_status_display(ctx["status"], current_timestamp=current_timestamp,
                                               previous_timestamp=previous_timestamp, now=beijing_now(),
                                               market_session_value=session, feed=feed)
+        display_status.update(boundary_status)
+        current_timestamp = display_status.get("last_quote_timestamp")
         ctx["status"].update(display_status)
         state = display_status["quote_status"]
         if current_timestamp is not None:
@@ -126,7 +133,7 @@ def render(ctx: dict) -> None:
             from ui.components.hybrid_status import render_indices, render_hybrid_status
             render_indices(ctx["provider"], background=True)
             render_hybrid_status(ctx["provider"])
-            st.caption(f"{state} · 行情时间：{market_quote_time_text}")
+            st.caption(f"{display_status.get('source', '--')} · {state} · 行情时间：{market_quote_time_text}")
         else:
             st.markdown(f"<div class='index-strip'><b>上证　--</b><b>深证　--</b><b>创业板　--</b>"
                         f"<span class='{badge}'>{state} ●</span><span>行情时间：{market_quote_time_text}</span></div>",

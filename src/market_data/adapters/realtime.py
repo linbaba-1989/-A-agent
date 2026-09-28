@@ -20,6 +20,7 @@ class PublicRealtimeProvider:
         self.universe, self.transport, self.clock = universe, transport, clock
         self.health, self.freshness = Health(), Freshness()
         self._last_good = {}
+        self._previous_raw = {}
         self._lock = RLock()
         self.snapshot_budget = snapshot_budget
 
@@ -74,10 +75,21 @@ class PublicRealtimeProvider:
             zero = [s for s,q in raw.items() if q.price == 0]
             valid = [s for s,q in raw.items() if q.price is not None and q.price > 0]
             snapshots, advances = {}, []
+            active_symbols, active_advancing_symbols = 0, 0
             session = market_session(now)
             for symbol in selected:
                 q = raw.get(symbol)
                 if q is not None:
+                    previous_raw = self._previous_raw.get(symbol)
+                    if (previous_raw and q.quote_time and previous_raw.quote_time
+                            and q.quote_time.date() == previous_raw.quote_time.date()):
+                        activity = any(getattr(q, field) is not None and getattr(previous_raw, field) is not None
+                            and getattr(q, field) != getattr(previous_raw, field)
+                            for field in ("price", "volume_shares", "amount_cny"))
+                        if activity:
+                            active_symbols += 1
+                            active_advancing_symbols += q.quote_time > previous_raw.quote_time
+                    self._previous_raw[symbol] = q
                     status, advanced = self.freshness.status(q, now)
                     if advanced is not None:
                         advances.append(advanced)
@@ -100,6 +112,13 @@ class PublicRealtimeProvider:
                                   len(raw)/len(selected), len(valid)/len(raw) if raw else 0,
                                   perf_counter() - started, self.source, errors,
                                   any(advances) if advances else None, session, now)
+            batch.coverage_status = "COMPLETE" if len(raw) == len(selected) and not errors else "PARTIAL" if raw else "UNAVAILABLE"
+            batch.provider_evidence = dict(compared_symbols=len(advances), advancing_symbols=sum(advances),
+                active_symbols=active_symbols, active_advancing_symbols=active_advancing_symbols,
+                timestamp_advanced_ratio=sum(advances)/len(advances) if advances else None,
+                freshness_counts={state:sum(q.quote_status == state for q in snapshots.values())
+                                  for state in ("LIVE", "STALE", "CACHED", "UNAVAILABLE")},
+                degraded=bool(errors or len(raw) < len(selected)))
             self.health.observe(batch)
             return batch
 

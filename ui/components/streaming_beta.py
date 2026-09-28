@@ -4,6 +4,8 @@ import streamlit.components.v1 as components
 from src.streaming_ui import StreamingUI
 from src.acceptance_source import shared_beta_feed
 from src.realtime_market import RealtimeMarketFeed
+from src.realtime_presentation import beta_unavailable_message
+from src.acceptance_source import TOKEN_SOURCE
 
 
 @st.cache_resource
@@ -22,6 +24,12 @@ def render_streaming_beta(ctx):
     feed = shared_beta_feed(ctx)
     offline = feed is None
     if feed is None:
+        # Legacy disk fallback belongs only to an actual Token selection.
+        selection = ctx.get("selection")
+        if not (getattr(selection, "name", None) == TOKEN_SOURCE or
+                getattr(selection, "required_source", None) == TOKEN_SOURCE):
+            st.info(beta_unavailable_message(ctx))
+            return
         feed = offline_token_feed()
         st.info("XtDataCenter 当前不可用；仅显示最近有效的 XtDataCenter Token 缓存。")
     owner = ctx.get("source_resources")

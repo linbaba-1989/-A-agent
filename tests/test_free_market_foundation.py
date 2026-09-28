@@ -351,6 +351,9 @@ def test_stale_minority_cannot_make_mostly_stale_batch_healthy():
     b.snapshots={f'{600000+i}.SH':MarketSnapshot(f'{600000+i}.SH',price=10,
         quote_time=OPEN,quote_status='LIVE' if i==0 else 'STALE') for i in range(100)}
     b.returned_symbols=list(b.snapshots)
+    # Known-active quotes changing values without advancing time are a source
+    # inconsistency; merely being STALE no longer proves a provider failure.
+    b.provider_evidence=dict(active_symbols=100,active_advancing_symbols=1)
     for _ in range(3):h.observe(b)
     assert h.state=='UNAVAILABLE'
 

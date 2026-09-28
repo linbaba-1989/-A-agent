@@ -76,7 +76,8 @@ class HybridMarketDataProvider:
         batch = self.realtime.snapshot(symbols)
         self.last_batch = batch
         self._states["realtime"] = batch.source + ":" + (
-            "AVAILABLE" if batch.valid_symbols else "UNAVAILABLE")
+            ("PARTIAL" if getattr(batch, "coverage_status", "") == "PARTIAL" else "AVAILABLE")
+            if batch.valid_symbols else "UNAVAILABLE")
         return batch
 
     def snapshot_all(self):

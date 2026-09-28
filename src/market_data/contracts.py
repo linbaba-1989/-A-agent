@@ -78,6 +78,8 @@ class SnapshotBatch:
     timestamp_advanced: bool | None = None
     market_session: str = ""
     received_at: datetime | None = None
+    coverage_status: str = field(default="UNASSESSED", kw_only=True)
+    provider_evidence: dict = field(default_factory=dict, kw_only=True)
 
     def metrics(self):
         return {key: value for key, value in asdict(self).items() if key != "snapshots"}

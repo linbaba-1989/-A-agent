@@ -22,20 +22,25 @@ from urllib.parse import parse_qs, urlsplit
 
 from .market_clock import beijing_now, market_session, should_fetch_quotes
 from .realtime_market import market_quote_timestamp, rank_rows
+from .realtime_presentation import presentation_rows, feed_mode
 from ui.view_models import quote_status_display
 
 ASSETS = Path(__file__).resolve().parents[1] / "ui" / "streaming"
 FIELDS = ("symbol", "name", "lastPrice", "lastClose", "change_pct", "speed_1m",
-          "speed_3m", "speed_5m", "amount", "quote_time", "quote_timestamp", "snapshot_seq")
+          "speed_3m", "speed_5m", "amount", "quote_time", "quote_timestamp", "snapshot_seq",
+          "market_data_mode", "provider", "realtime_provider", "source", "trade_date", "quote_status")
 
 
 def build_payload(feed, rows, previous_timestamp, now):
+    rows, boundary_status = presentation_rows(feed, rows, now)
     stamp = market_quote_timestamp(rows, feed.last_quote_timestamp)
     status = quote_status_display({}, stamp, previous_timestamp, now=now,
                                   market_session_value=market_session(now), feed=feed)
-    if rows and (not should_fetch_quotes(market_session(now)) or status['quote_status'] == 'UNAVAILABLE'):
+    if rows and (not should_fetch_quotes(market_session(now)) or
+                 (feed_mode(feed.provider) == "legacy" and status['quote_status'] == 'UNAVAILABLE')):
         status.update(quote_status="CACHED", last_quote_timestamp=stamp,
                       last_quote_time=max(row["quote_time"] for row in rows), valid_quotes=len(rows))
+    status.update(boundary_status)
     ranked = rank_rows(rows, "change_pct", 20)
     target = next((row for row in rows if row["symbol"] == "600498.SH"), None)
     def public(row):

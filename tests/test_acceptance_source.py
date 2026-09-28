@@ -12,6 +12,12 @@ from src.market_data_router import MarketDataRouter
 
 
 class Provider:
+    def get_stock_universe(self):
+        return []
+
+    def snapshot(self, symbols=None):
+        raise AssertionError("policy check must not fetch quotes")
+
     def __init__(self, configured=True, ok=True):
         self.configured, self.ok = configured, ok
         self.closed = False

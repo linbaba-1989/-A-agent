@@ -18,6 +18,14 @@ class FreeMarketDataProvider:
         self.timer, self.probe_interval, self.switch_cooldown = timer, probe_interval, switch_cooldown
         self.last_switch, self.last_probe = float("-inf"), float("-inf")
         self._lock = RLock()
+        self.last_observations = {}
+
+    def _observe(self, source, provider, symbols):
+        batch = provider.snapshot(symbols)
+        from dataclasses import asdict
+        # Keep the triggering primary response even when the returned batch is fallback.
+        self.last_observations[source] = dict(batch=batch.metrics(), health=asdict(provider.health))
+        return batch
 
     @property
     def health(self):
@@ -35,22 +43,22 @@ class FreeMarketDataProvider:
             symbols = self.get_stock_universe() if symbols is None else symbols
             now = self.timer()
             if self.active_source == "tencent":
-                batch = self.primary.snapshot(symbols)
+                batch = self._observe("tencent", self.primary, symbols)
                 if (self.primary.health.consecutive_failures >= self.primary.health.unavailable_after
                         and now - self.last_switch >= self.switch_cooldown):
-                    candidate = self.fallback.snapshot(symbols)
+                    candidate = self._observe("sina", self.fallback, symbols)
                     if self.fallback.health.last_sample_good:
                         self.active_source, self.last_switch, self.last_probe = "sina", now, now
                         return candidate
                 return batch
             if now - self.last_probe >= self.probe_interval:
                 self.last_probe = now
-                candidate = self.primary.snapshot(symbols)
+                candidate = self._observe("tencent", self.primary, symbols)
                 if (self.primary.health.state == "HEALTHY"
                         and now - self.last_switch >= self.switch_cooldown):
                     self.active_source, self.last_switch = "tencent", now
                     return candidate
-            return self.fallback.snapshot(symbols)
+            return self._observe("sina", self.fallback, symbols)
 
     def close(self):
         pass  # No worker process, token runtime, or persistent socket.

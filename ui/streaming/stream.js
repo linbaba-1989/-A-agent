@@ -16,7 +16,8 @@ const display = (value, key) => {
   return value.toFixed(2) + (['change_pct', 'speed_1m', 'speed_3m', 'speed_5m'].includes(key) ? '%' : '');
 };
 const heroFields = [['lastPrice','最新价'],['change','涨跌额'],['change_pct','涨跌幅'],['amount','成交额'],
-  ['speed_1m','1m'],['speed_3m','3m'],['speed_5m','5m'],['quote_time','单股行情时间']];
+  ['speed_1m','1m'],['speed_3m','3m'],['speed_5m','5m'],['quote_time','单股行情时间'],
+  ['source','实际来源'],['quote_status','单股状态'],['trade_date','交易日期']];
 const rankFields = ['rank','symbol','name','lastPrice','change_pct','speed_1m','speed_3m','speed_5m','amount'];
 export function createRenderer(doc, {acceptanceMode=false} = {}) {
   const get = id => doc.getElementById(id);
@@ -53,9 +54,10 @@ export function createRenderer(doc, {acceptanceMode=false} = {}) {
       const status = payload.status;
       text(get('market'), '市场：' + status.market);
       text(get('quote-status'), status.quote_status);
+      text(get('source'), [status.market_data_mode, status.source].filter(Boolean).join(' → ') || '--');
       text(get('market-time'), display(status.last_quote_time, 'quote_time'));
       // Status events are independent of sequence; duplicate snapshots never animate.
-      if (payload.snapshot_seq > seq) {
+      if (payload.snapshot_seq > seq || (payload.top20.length === 0 && rows.size > 0)) {
         const animate = seq >= 0 && payload.from_cache === false && status.market_session === 'open' && status.quote_status === 'LIVE';
         if (payload.target) {
           update(hero, target, payload.target, animate);

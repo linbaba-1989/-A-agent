@@ -4,6 +4,28 @@ from datetime import timedelta
 from ..market_clock import DEFAULT_TRADING_CALENDAR, market_session, to_beijing
 
 
+def provider_failure_reasons(*, coverage, valid_ratio, latency, has_prices, advanced,
+                             session, has_recent_quotes=True, errors=(),
+                             min_coverage=.95, min_valid_price=.95, max_latency=15):
+    """Transport/completeness and market progression, not the fraction of liquid stocks."""
+    reasons = []
+    if any(e.startswith("HTTP_") for e in errors):
+        reasons.append("HTTP_FAILURE")
+    if any(e in {"TimeoutError", "URLError", "ConnectionError", "ConnectionResetError", "OSError"} for e in errors):
+        reasons.append("NETWORK_FAILURE")
+    if coverage < min_coverage:
+        reasons.append("COVERAGE_FAILURE")
+    if not has_prices or valid_ratio < min_valid_price:
+        reasons.append("VALID_PRICE_FAILURE")
+        if any("malformed" in e or "parse" in e.lower() for e in errors):
+            reasons.append("PARSE_FAILURE")
+    if latency > max_latency or "snapshot_budget_exceeded" in errors:
+        reasons.append("LATENCY")
+    if not has_recent_quotes or (session in {"open", "auction"} and advanced is False):
+        reasons.append("TIMESTAMP_STALL")
+    return reasons
+
+
 @dataclass
 class Health:
     state: str = "DEGRADED"
@@ -27,13 +49,20 @@ class Health:
         self.latency, self.timestamp_advanced = batch.latency, batch.timestamp_advanced
         usable = sum(batch.snapshots[s].quote_status in {"LIVE", "CACHED"}
                      for s in batch.returned_symbols)
-        fresh = usable / max(1, len(batch.returned_symbols)) >= self.min_coverage
-        if batch.market_session in {"open", "auction"}:
-            fresh = fresh and batch.timestamp_advanced is not False
-        good = (bool(batch.valid_symbols) and self.coverage_ratio >= self.min_coverage
-                and self.valid_price_ratio >= self.min_valid_price
-                and self.latency <= self.max_latency and fresh
-                and any(q.quote_status != "UNAVAILABLE" for q in batch.snapshots.values()))
+        reasons = provider_failure_reasons(coverage=self.coverage_ratio, valid_ratio=self.valid_price_ratio,
+            latency=self.latency, has_prices=bool(batch.valid_symbols), advanced=self.timestamp_advanced,
+            session=batch.market_session, has_recent_quotes=usable > 0, errors=batch.errors,
+            min_coverage=self.min_coverage, min_valid_price=self.min_valid_price, max_latency=self.max_latency)
+        evidence = getattr(batch, "provider_evidence", {})
+        active = evidence.get("active_symbols", 0)
+        # Price/volume/amount changed: their timestamps should progress coherently.
+        # Untraded securities never enter this denominator. Keep the existing
+        # completeness threshold; do not lower it to conceal real market stalls.
+        if (batch.market_session in {"open", "auction"} and active and
+                evidence.get("active_advancing_symbols", 0) / active < self.min_coverage):
+            if "TIMESTAMP_STALL" not in reasons:
+                reasons.append("TIMESTAMP_STALL")
+        good = not reasons
         self.last_sample_good = good
         if good:
             self.consecutive_successes += 1
@@ -44,7 +73,7 @@ class Health:
         else:
             self.consecutive_failures += 1
             self.consecutive_successes = 0
-            self.reason = "coverage_price_latency_or_freshness_failed"
+            self.reason = ",".join(reasons)
             if self.consecutive_failures >= self.unavailable_after:
                 self.state = "UNAVAILABLE"
             elif self.consecutive_failures >= self.degrade_after:

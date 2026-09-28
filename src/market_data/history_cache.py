@@ -11,6 +11,14 @@ from ..market_clock import DEFAULT_TRADING_CALENDAR
 DEFAULT_CACHE = Path(__file__).resolve().parents[2] / "data/free_history"
 
 
+def cacheable(result):
+    # Preserve complete, structurally valid bars with explicit calendar gaps.
+    # Never cache corruption/identity/parse failures as trustworthy partial history.
+    return bool(result.bars and (result.quality_status == "VALID" or
+        (result.quality_status == "DEGRADED" and result.warnings and
+         all(w.startswith("missing_session:") for w in result.warnings))))
+
+
 class FreeHistoryCache:
     def __init__(self, path=DEFAULT_CACHE):
         self.path = Path(path)
@@ -33,20 +41,20 @@ class FreeHistoryCache:
                     for r in payload["bars"]]
             result = validate(bars, symbol, source, adjustment, date.min,
                               date.fromisoformat(payload["last_trade_date"]), now, calendar)
-            if result.quality_status != "VALID" or not result.bars:
+            if not cacheable(result):
                 return None
             if result.bars[-1].trade_date.isoformat() != payload["last_trade_date"]:
                 return None
             result.data_status = "CACHED"
             result.bars = [replace(b, data_status="CACHED") for b in result.bars]
             result.updated_at = payload["updated_at"]
-            result.warnings.extend(payload.get("warnings", []))
+            result.warnings = list(dict.fromkeys(result.warnings + payload.get("warnings", [])))
             return result
         except (OSError, ValueError, TypeError, KeyError):
             return None
 
     def write(self, result, kind, endpoint, now):
-        if result.quality_status != "VALID" or not result.bars:
+        if not cacheable(result):
             return
         path = self._path(result.symbol, result.source, result.adjustment, kind, endpoint)
         path.parent.mkdir(parents=True, exist_ok=True)

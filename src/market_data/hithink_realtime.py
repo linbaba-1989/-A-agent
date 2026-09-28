@@ -58,6 +58,7 @@ class HithinkRealtimeProvider:
         self.freshness,self.health=OfficialFreshness(calendar=calendar),Health()
         self._lock=RLock()
         self.last_batch=None
+        self._index_prices = {}
 
     def quote(self,symbol):
         symbol=canonical_symbol(symbol)
@@ -80,6 +81,7 @@ class HithinkRealtimeProvider:
             names={s:r["name"] for s,r in self.universe.rows.items()}
             started=perf_counter()
             rows,zero,errors,pages,advances={},[],[],[],[]
+            index_evidence = {}
             total,offset,full=None,0,selected is None
             page_size=100  # Official default. No inferred maximum.
             groups=[selected[i:i+100] for i in range(0,len(selected),100)] if selected else None
@@ -118,6 +120,25 @@ class HithinkRealtimeProvider:
                             if q.symbol in rows:
                                 errors.append("duplicate_snapshot:"+q.symbol)
                             quote_status,advanced=self.freshness.status(q,self.clock())
+                            if index:
+                                page_time = q.quote_time
+                                current = to_beijing(self.clock())
+                                previous_price = self._index_prices.get(q.symbol)
+                                available = q.price is not None and page_time is not None
+                                same_day = available and page_time.date() == current.date()
+                                in_session = market_session(current, self.calendar) in {"open", "auction"}
+                                recent = same_day and -2 <= (current-page_time).total_seconds() <= 60
+                                quote_status = ("UNAVAILABLE" if not available else
+                                                "STALE" if in_session and not recent else "CACHED")
+                                index_evidence[q.symbol] = dict(symbol=q.symbol, price=q.price,
+                                    prev_close=q.prev_close, pct_change=q.pct_change,
+                                    page_timestamp=page_time.isoformat() if page_time else None,
+                                    price_changed_since_previous_sample=None if previous_price is None else q.price != previous_price,
+                                    availability="AVAILABLE_CURRENT_SESSION" if in_session and recent else quote_status,
+                                    per_symbol_live_verified=False)
+                                self._index_prices[q.symbol] = q.price
+                                q = replace(q, quote_time=None)  # Page time is not a trade timestamp.
+                                advanced = None
                             rows[q.symbol]=replace(q,quote_status=quote_status)
                             if row.get("last_price")==0:
                                 zero.append(q.symbol)
@@ -150,5 +171,8 @@ class HithinkRealtimeProvider:
                 any(advances) if advances else None,market_session(self.clock(),self.calendar),
                 self.clock(),status,total,0,page_size if full else None,len(pages),pages)
             self.health.observe(batch)
+            if index:
+                batch.provider_evidence = dict(index_observations=index_evidence,
+                    limitation="page timestamp only; no per-symbol trade timestamp; LIVE not asserted")
             self.last_batch=batch
             return batch
