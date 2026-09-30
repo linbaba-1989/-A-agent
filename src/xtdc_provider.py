@@ -298,6 +298,58 @@ class XtDataCenterProvider:
         return self.get_local_history(symbols, count, batch_size, period)
 
     @staticmethod
+    def _history_range(period: str, start_time: str, end_time: str) -> None:
+        if period not in {"1d", "1m", "5m", "15m", "30m"}:
+            raise ValueError("unsupported_history_period")
+        def parse(value):
+            if not isinstance(value, str) or len(value) not in {8, 14} or not value.isdigit():
+                raise ValueError("explicit_history_range_required")
+            return datetime.strptime(value, "%Y%m%d" if len(value) == 8 else "%Y%m%d%H%M%S")
+        start, end = parse(start_time), parse(end_time)
+        if start > end or (end - start).total_seconds() > 366 * 86400:
+            raise ValueError("invalid_or_over_one_year_history_range")
+
+    def download_history_range(self, symbols: list[str], period: str, start_time: str, end_time: str):
+        """Explicit bounded opt-in download; existing production callers are unchanged."""
+        self._history_range(period, start_time, end_time)
+        if not symbols or len(symbols) > 50:
+            raise ValueError("history_download_requires_1_to_50_symbols")
+        # This runtime downloads base bars; its reader produces 15m/30m bars.
+        # Direct 15m/30m downloads fail even though the SDK reader supports them.
+        download_period = "5m" if period in {"15m", "30m"} else period
+        return self.backend.request("download_history_data2", symbols=list(dict.fromkeys(symbols)),
+                                    period=download_period, start_time=start_time, end_time=end_time)
+
+    def get_history_range(self, symbols: list[str], period: str, start_time: str, end_time: str,
+                          *, adjustment: str = "raw", count: int = -1) -> dict[str, pd.DataFrame]:
+        """Read one explicit adjustment series without filling missing bars."""
+        self._history_range(period, start_time, end_time)
+        adjustments = {"raw": "none", "qfq": "front", "hfq": "back"}
+        if adjustment not in adjustments:
+            raise ValueError("unsupported_history_adjustment")
+        if not symbols or len(symbols) > 50 or type(count) is not int or count == 0 or count < -1:
+            raise ValueError("invalid_history_symbols_or_count")
+        payload = self.backend.request("get_market_data_ex", fields=["time", "open", "high", "low", "close", "volume", "amount"],
+            symbols=list(dict.fromkeys(symbols)), period=period, start_time=start_time, end_time=end_time,
+            count=count, dividend_type=adjustments[adjustment])
+        result = {}
+        for symbol, encoded in (payload or {}).items():
+            frame = pd.DataFrame(encoded["data"], columns=encoded["columns"], index=encoded["index"])
+            if frame.empty and "time" not in frame:
+                frame["time"] = pd.Series(index=frame.index, dtype="float64")
+            timestamps = pd.to_datetime(pd.to_numeric(frame["time"], errors="coerce"),
+                                        unit="ms", utc=True).dt.tz_convert("Asia/Shanghai")
+            frame["source"], frame["provider"] = "xtdc", self.provider_name
+            frame["trade_date"] = timestamps.dt.strftime("%Y-%m-%d")
+            frame["quote_time"] = timestamps.map(lambda value: value.isoformat() if pd.notna(value) else None)
+            frame["status"], frame["adjustment"] = "HISTORICAL", adjustment
+            frame.attrs.update(source="xtdc", provider=self.provider_name, adjustment=adjustment,
+                               period=period, status="AVAILABLE" if not frame.empty else "UNAVAILABLE",
+                               base_period="5m" if period in {"15m", "30m"} else period)
+            result[symbol] = frame
+        return result
+
+    @staticmethod
     def tick_timestamp(tick: dict[str, Any]) -> float | None:
         value = tick.get("time") or tick.get("timetag")
         if not isinstance(value, (int, float)) or value <= 0:

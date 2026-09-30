@@ -82,7 +82,25 @@ def main(runtime_root: str) -> None:
                 result = {}
                 for code in request["symbols"]:
                     with redirect_stdout(sys.stderr):
-                        result[code] = xtdata.download_history_data(code, request["period"])
+                        result[code] = xtdata.download_history_data(
+                            code, request["period"], request.get("start_time", ""), request.get("end_time", ""))
+            elif command == "download_history_data2":
+                with redirect_stdout(sys.stderr):
+                    result = xtdata.download_history_data2(request["symbols"], request["period"],
+                        request["start_time"], request["end_time"])
+            elif command == "get_trading_dates":
+                with redirect_stdout(sys.stderr):
+                    result = xtdata.get_trading_dates(request["market"], request["start_time"], request["end_time"])
+            elif command == "get_divid_factors":
+                with redirect_stdout(sys.stderr):
+                    frame = xtdata.get_divid_factors(request["symbol"], request["start_time"], request["end_time"])
+                result = {"columns": list(frame.columns), "index": list(frame.index), "data": frame.values.tolist()}
+            elif command == "subscribe_quote":
+                with redirect_stdout(sys.stderr):
+                    result = xtdata.subscribe_quote(request["symbol"], period="tick", count=0)
+            elif command == "unsubscribe_quote":
+                with redirect_stdout(sys.stderr):
+                    result = xtdata.unsubscribe_quote(request["subscription_id"])
             elif command == "get_full_tick":
                 with redirect_stdout(sys.stderr):
                     result = xtdata.get_full_tick(request["symbols"])
@@ -98,6 +116,14 @@ def main(runtime_root: str) -> None:
                     frames = xtdata.get_local_data(field_list=request["fields"], stock_list=request["symbols"],
                                                    period=request["period"], count=request["count"],
                                                    dividend_type="none", fill_data=False) or {}
+                result = {code: {"columns": list(frame.columns), "index": list(frame.index),
+                                 "data": frame.values.tolist()} for code, frame in frames.items()}
+            elif command == "get_market_data_ex":
+                with redirect_stdout(sys.stderr):
+                    frames = xtdata.get_market_data_ex(field_list=request["fields"], stock_list=request["symbols"],
+                        period=request["period"], start_time=request["start_time"], end_time=request["end_time"],
+                        count=request.get("count", -1), dividend_type=request.get("dividend_type", "none"),
+                        fill_data=False) or {}
                 result = {code: {"columns": list(frame.columns), "index": list(frame.index),
                                  "data": frame.values.tolist()} for code, frame in frames.items()}
             elif command == "close":
@@ -117,5 +143,17 @@ def main(runtime_root: str) -> None:
 
 
 if __name__ == "__main__":
+    if "--quiet-history" in sys.argv:
+        import os
+        # Dedicated historical worker: preserve only the private JSON protocol.
+        protocol = os.fdopen(os.dup(sys.stdout.fileno()), "w", encoding="utf-8", buffering=1)
+        null = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(null, 1)
+        os.dup2(null, 2)
+        os.close(null)
+        sys.stdout = protocol
+        sys.path.insert(0, sys.argv[1])
+        from xtquant import datacenter
+        datacenter.log_init = lambda: None
     _configure_json_streams()
     main(sys.argv[1])
