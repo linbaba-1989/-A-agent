@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 from ui.components.stock_table import render_stock_table
 from ui.view_models import RANGE_PLACEHOLDERS, filter_scan_rows, history_status_display
@@ -50,7 +51,7 @@ def render(ctx: dict) -> None:
         ma_breakout = options[5].checkbox("MA突破")
         actions = third[2].columns([.8, 1.2])
         reset = actions[0].button("重置", width="stretch")
-        start = actions[1].button("开始扫描", type="primary", disabled=not ctx["available"], width="stretch")
+        start = actions[1].button("开始扫描", type="primary", disabled=not ctx["available"] or ctx.get("scanner") is None, width="stretch")
         if reset:
             for key in tuple(st.session_state):
                 if key not in ("selected_symbol", "scan_rows", "research_history",
@@ -60,8 +61,12 @@ def render(ctx: dict) -> None:
 
     if start:
         progress = st.progress(0, text="正在初始化历史指标……")
-        result = ctx["scanner"].scan(100, progress_callback=lambda value, msg: progress.progress(min(float(value), 1.0), text=msg))
+        result = ctx["scanner"].scan(None, progress_callback=lambda value, msg: progress.progress(min(float(value), 1.0), text=msg))
         progress.empty()
+        if not result.diagnostics.connected:
+            st.error(result.diagnostics.message or "行情连接失败，本次扫描未取得有效结果")
+            st.session_state.scan_rows = []
+            return
         st.session_state.scan_rows = result.rows
         st.session_state.last_scan_elapsed = result.diagnostics.elapsed_seconds
 
@@ -78,14 +83,24 @@ def render(ctx: dict) -> None:
     history = ctx["scanner"].history_service.info()
     technical_filter_requested = recent_high or ma_breakout or any(above.values())
     if technical_filter_requested and history.status in {"not_started", "initializing", "failed"}:
-        st.warning("技术指标缓存尚未就绪；本次暂不应用均线、新高和突破筛选。")
-        filters.update({f"above_ma{window}": False for window in (5, 10, 20, 60)})
-        filters.update({"recent_high": False, "ma_breakout": False})
+        st.warning("技术指标缓存尚未就绪；保留所有已选条件，缺少所需指标的股票不入选。")
+    invalid_ranges = [label for label, low, high in (
+        ("价格", price_min, price_max), ("涨跌幅", change_min, change_max),
+        ("换手率", turnover_min, turnover_max))
+        if low is not None and high is not None and low > high]
+    if invalid_ranges:
+        st.error("、".join(invalid_ranges) + "最低值不能大于最高值")
+        return
     source_rows = st.session_state.get("scan_rows", [])
     rows = filter_scan_rows(source_rows, filters)
     st.caption(f"历史指标：{history_status_display(history.status)}｜可用 {history.ready}/{history.total}"
                f"｜不足60根 {history.insufficient}｜无历史 {history.unavailable}｜失败 {history.failed}")
     st.caption(f"扫描返回：{len(source_rows)}｜当前筛选：{len(rows)}｜显示前100条｜扫描池：{ctx['status']['active_universe']}")
+    st.caption("所有已选条件同时满足才入选；缺失或非有限数值不视为通过。先筛选全部扫描结果，再展示前100条。")
+    if rows:
+        export = pd.DataFrame(rows).drop(columns=["field_provenance"], errors="ignore")
+        st.download_button("导出全部筛选结果 CSV", export.to_csv(index=False).encode("utf-8-sig"),
+                           file_name="a_share_screening.csv", mime="text/csv")
     render_stock_table(rows[:100], "scanner_results")
     if rows:
         chosen = st.selectbox("选择股票进行研究", [row["symbol"] for row in rows if row.get("symbol")])
