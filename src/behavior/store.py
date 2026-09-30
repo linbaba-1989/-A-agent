@@ -3,6 +3,7 @@ import json
 import hashlib
 from datetime import datetime
 import pandas as pd
+from .models import FEATURES
 
 def encode(value):
     return json.dumps(value,ensure_ascii=False,allow_nan=False,default=str)
@@ -68,6 +69,8 @@ class BehaviorStore:
         self.db.execute("UPDATE behavior_jobs SET status=?,analysis_id=?,error=?,updated_at=? WHERE job_id=? AND symbol=? AND period=?",
                         [status,analysis_id,error,datetime.now(),job_id,symbol,period])
     def save(self, result, fingerprint, job_id):
+        if any(set(s["features"]) != set(FEATURES) for s in result["segments"]):
+            raise ValueError("feature_allowlist_violation")
         aid=hashlib.sha256((result["symbol"]+result["period"]+result["version"]+result["config_key"]+result["data_end_date"]+fingerprint).encode()).hexdigest()[:32]
         self.db.execute("BEGIN")
         try:

@@ -194,3 +194,14 @@ def test_cli_stops_before_new_symbols_and_preserves_checkpoint(tmp_path, monkeyp
         store=BehaviorStore(history)
         assert store.status("guard:1d")=={"PENDING":10}
         assert history.counts()["1d"]==0
+
+def test_future_label_is_rejected_at_the_persistence_boundary(tmp_path):
+    f=wave(200); result=BehaviorEngine().analyze("600498.SH",f)
+    result["segments"][0]["features"]["forward_return"]=.5
+    with HistoricalStore(tmp_path/"feature_guard.duckdb") as history:
+        store=BehaviorStore(history)
+        store.plan("guard",["600498.SH"],"1d",result["config_key"],result["data_end_date"])
+        with pytest.raises(ValueError,match="feature_allowlist"):
+            store.save(result,store.fingerprint(f),"guard")
+        assert store.status("guard")=={"PENDING":1}
+        assert store.db.execute("SELECT count(*) FROM behavior_segments").fetchone()[0]==0

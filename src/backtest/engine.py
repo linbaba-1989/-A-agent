@@ -145,7 +145,11 @@ class BacktestEngine:
             # Close-observed stops deliberately become next-open orders, not same-bar fills.
             if quantity and pending is None:
                 move=float(row.close/position["entry_price"]-1)
-                reason="STOP_LOSS" if move<=-position["stop_loss"] else "TAKE_PROFIT" if move>=position["take_profit"] else "MAX_HOLDING" if day_i-position["entry_session"]>=position["max_holding_days"] else None
+                # After N completed holding sessions (including entry day),
+                # schedule exit at the following session's first tradable open.
+                holding_complete=(row.available_at.hour==15 and row.available_at.minute==0
+                    and day_i-position["entry_session"]+1>=position["max_holding_days"])
+                reason="STOP_LOSS" if move<=-position["stop_loss"] else "TAKE_PROFIT" if move>=position["take_profit"] else "MAX_HOLDING" if holding_complete else None
                 if reason:
                     pending=dict(action="SELL",signal_time=row.available_at,exit_reason=reason)
             equity.append(dict(timestamp=row.available_at.isoformat(),cash=float(cash),quantity=quantity,

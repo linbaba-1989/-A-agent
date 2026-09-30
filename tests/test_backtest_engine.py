@@ -71,3 +71,13 @@ def test_strict_limits_override_estimate_and_cash_cannot_buy_fractional_lot():
     assert not result["fills"]
     result=BacktestEngine(TradingRules(initial_cash=1000)).run(bars(),[dict(action="BUY",signal_time="2026-01-05T15:00:00")])
     assert not result["fills"] and any(b["reason"]=="INSUFFICIENT_CASH" for b in result["blocked_orders"])
+
+@pytest.mark.parametrize("period",["1d","30m"])
+def test_one_session_max_holding_sells_next_session_open(period):
+    times=None if period=="1d" else pd.to_datetime(["2026-01-05 15:00","2026-01-06 10:00","2026-01-06 15:00","2026-01-07 10:00"])
+    result=BacktestEngine().run(bars(times),[dict(action="BUY",signal_time="2026-01-05T15:00:00",max_holding_days=1)],period)
+    trade=result["trades"][0]
+    assert trade["entry_time"].startswith("2026-01-06")
+    assert trade["exit_time"].startswith("2026-01-07T09:30")
+    assert trade["holding_sessions"]==1
+    assert trade["exit_reason"]=="MAX_HOLDING"

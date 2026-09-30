@@ -40,6 +40,12 @@ or cluster distance. Outcomes are separately labeled 1/3/5/10/20 subsequent
 **trading days**, even for 30m. They start at the confirmation close and end
 at the target session close, with MFE >= 0 and MAE <= 0. They are research
 labels, not assumed achievable trade returns.
+Session offsets use observed dates in the selected stock series. An absent
+session is not synthesized as a tradable bar: for suspended or otherwise
+expected-missing sessions, these offsets are observed-session horizons,
+not guaranteed exchange-calendar horizons. The fixed ten-stock pilot has
+485 daily observations per stock. A full calendar/corporate-action model
+is outside this V1 execution dataset.
 
 Chronological session split: 60% train, 20% validation, 20% untouched OOS.
 No shuffle. Training outcomes crossing train_end are purged; validation
@@ -78,6 +84,10 @@ T+1 prevents selling shares bought that session, including same-day 30m exits.
 Close-observed stops/takes create next-open orders; there is no claim of
 intrabar stop-price execution. Open terminal positions stay open and are
 marked to market rather than liquidated at an unavailable future price.
+Maximum holding N counts completed sessions including the entry session;
+the exit is scheduled at that session's close for the next tradable open.
+For N=1, a purchase on day D can first exit on D+1, subject to T+1,
+liquidity and limits. The daily and 30m engines share this boundary.
 
 Minimum buy quantity and quantity increments are separate parameters.
 Defaults are 100/100 for main board and ChiNext; the research adapter uses
@@ -158,6 +168,17 @@ Resume with the same arguments and no max-new-symbols cap.
 Below 15 GiB free, no new symbol starts. Logs/progress/output/DB remain local,
 outside the source whitelist. The database is single-writer; the read-only
 Behavior Lab gracefully reports an update in progress when it is busy.
+Windows progress replacement has bounded retry; a briefly locked observer
+file does not invalidate the committed database checkpoint. Final evidence
+output still requires a successful atomic replacement.
+
+The initial holding-period boundary correction left the pattern algorithm
+at v1.1. Before resuming its existing all-daily job, all 2,027 completed
+profiles were verified to have no selected signals, candidates, orders or
+positions. Their results cannot exercise the corrected exit path. Only the
+20 pilot diagnostic probes were refreshed, after exact verification of
+input fingerprints, research fields and unchanged main backtests. The
+local evidence preserves the original pilot and the compatibility proof.
 
 The Behavior Lab shows current matching, historical matches/differences,
 sample counts, separate train/validation/OOS horizon statistics, candidates,
