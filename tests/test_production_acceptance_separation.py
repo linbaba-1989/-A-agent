@@ -58,9 +58,10 @@ class Scanner:
     def _volume_ratio(*_): return 1.0
     def scan(self, limit, progress_callback=None):
         self.scan_calls+=1
+        assert limit is None, "UI must filter the complete universe before display truncation"
         return SimpleNamespace(rows=[{'symbol':'600498.SH','name':'测试股票','lastPrice':43.48,
                                       'change_pct':1.1163,'amount':43_480_000,'turnover_rate':1.0}],
-                               diagnostics=SimpleNamespace(elapsed_seconds=.01))
+                               diagnostics=SimpleNamespace(elapsed_seconds=.01, connected=True))
 
 
 @pytest.fixture

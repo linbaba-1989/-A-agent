@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+from math import isfinite
 
 from src.market_clock import (DEFAULT_TRADING_CALENDAR, MARKET_SESSIONS, OPEN, QUOTE_STATUSES,
                               market_session, market_session_label,
@@ -221,7 +222,9 @@ def raw_json_expanded_default() -> bool:
 def filter_scan_rows(rows: list[dict[str, Any]], filters: dict[str, Any]) -> list[dict[str, Any]]:
     def number(row, key):
         value = row.get("lastPrice") if key == "last_price" and row.get(key) is None else row.get(key)
-        try: return float(value)
+        try:
+            numeric = float(value)
+            return numeric if isfinite(numeric) else None
         except (TypeError, ValueError): return None
     result = []
     for row in rows:

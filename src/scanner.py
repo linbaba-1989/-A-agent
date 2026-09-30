@@ -159,7 +159,7 @@ class MarketScanner:
             )
         return self.suspend_flag_cache[symbol]
 
-    def scan(self, top_n: int = 30, progress_callback=None) -> ScanResult:
+    def scan(self, top_n: int | None = 30, progress_callback=None) -> ScanResult:
         started = perf_counter()
         connection = self._connection or self.provider.connection_diagnostics()
         if not connection.connected:
@@ -254,4 +254,4 @@ class MarketScanner:
         )
         unavailable = [] if diagnostic.turnover_valid_count else ["turnover_rate（双公式交叉验证未通过）"]
         unavailable.append("sector_strength")
-        return ScanResult(rows[:top_n], diagnostic, unavailable)
+        return ScanResult(rows if top_n is None else rows[:top_n], diagnostic, unavailable)
