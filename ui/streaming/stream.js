@@ -19,7 +19,7 @@ const heroFields = [['lastPrice','最新价'],['change','涨跌额'],['change_pc
   ['speed_1m','1m'],['speed_3m','3m'],['speed_5m','5m'],['quote_time','单股行情时间'],
   ['source','实际来源'],['quote_status','单股状态'],['trade_date','交易日期']];
 const rankFields = ['rank','symbol','name','lastPrice','change_pct','speed_1m','speed_3m','speed_5m','amount'];
-export function createRenderer(doc, {acceptanceMode=false} = {}) {
+export function createRenderer(doc, {acceptanceMode=false, fastMode=false} = {}) {
   const get = id => doc.getElementById(id);
   const hero = new Map(), rows = new Map();
   let target = null, seq = -1, updates = 0, lastRenderMs = 0;
@@ -51,6 +51,29 @@ export function createRenderer(doc, {acceptanceMode=false} = {}) {
   return {
     apply(payload) {
       const started = performance.now();
+      if (payload.channel === 'fast') {
+        const quote = payload.target;
+        if (quote) {
+          update(hero, target, quote, quote.quote_status === 'LIVE');
+          text(get('current-symbol'), quote.symbol);
+          text(get('symbol-name'), quote.name || '');
+          target = {...quote};
+        } else {
+          for (const cell of hero.values()) text(cell, '--');
+          target = null;
+        }
+        const fastSource = payload.source === 'tencent' ? 'Tencent' : payload.source === 'sina' ? 'Sina' : (payload.source || '--');
+        text(get('fast-status'), '单股快速行情：Fast Lane · ' + fastSource + ' ｜目标约1秒 ｜' +
+          (quote?.quote_status || 'UNAVAILABLE') + ' ｜请求接收：' + payload.received_at +
+          (payload.subscription?.subscription_status === 'DEGRADED_LIMIT' ? ' ｜超过50只上限，部分订阅未接受' : ''));
+        const watch = get('fast-watchlist'); watch.replaceChildren();
+        for (const row of payload.watchlist || []) {
+          const node = doc.createElement('p');
+          node.textContent = [row.symbol,row.name,display(row.lastPrice,'lastPrice'),row.source,row.quote_status,row.quote_time].join(' ｜ ');
+          watch.append(node);
+        }
+        return;
+      }
       const status = payload.status;
       text(get('market'), '市场：' + status.market);
       text(get('quote-status'), status.quote_status);
@@ -59,11 +82,11 @@ export function createRenderer(doc, {acceptanceMode=false} = {}) {
       // Status events are independent of sequence; duplicate snapshots never animate.
       if (payload.snapshot_seq > seq || (payload.top20.length === 0 && rows.size > 0)) {
         const animate = seq >= 0 && payload.from_cache === false && status.market_session === 'open' && status.quote_status === 'LIVE';
-        if (payload.target) {
+        if (!fastMode && payload.target) {
           update(hero, target, payload.target, animate);
           text(get('symbol-name'), payload.target.name || '');
           target = {...payload.target};
-        } else {
+        } else if (!fastMode) {
           for (const cell of hero.values()) { text(cell, '--'); cell.className = ''; }
           text(get('symbol-name'), ''); target = null;
         }
@@ -141,15 +164,28 @@ export function connectStream(url, renderer, connection, EventSourceClass, butto
 }
 
 if (typeof document !== 'undefined') {
-  const renderer = createRenderer(document, {acceptanceMode:new URLSearchParams(location.search).get('acceptance') === '1'});
+  const params = new URLSearchParams(location.search);
+  const fastMode = params.get('fast') === '1';
+  const renderer = createRenderer(document, {acceptanceMode:params.get('acceptance') === '1', fastMode});
   const timings = new LatencySamples();
   const endpoint = new URL('events', location.href); endpoint.search = location.search;
-  const stop = connectStream(endpoint.href, renderer, document.getElementById('connection'), EventSource,
+  const stop = params.get('fast_only') === '1' ? () => {} : connectStream(endpoint.href, renderer, document.getElementById('connection'), EventSource,
                              document.getElementById('reconnect'), (payload,received,applied)=>{
     if(!payload.diagnostics_enabled) return;
     timings.add(payload,received,applied,document.getElementById('market-time').textContent,
                 document.getElementById('quote-status').textContent);
     document.getElementById('diagnostics').dataset.trace=JSON.stringify(timings.samples);
   });
-  window.addEventListener('pagehide', stop, {once:true});
+  let stopFast = () => {};
+  if (fastMode) {
+    document.getElementById('watch-section').hidden = false;
+    const fastEndpoint = new URL('fast_events', location.href); fastEndpoint.search = location.search;
+    const indicator = document.createElement('span'); document.getElementById('fast-status').before(indicator);
+    const retry = document.createElement('button'); retry.textContent = '重连快速行情'; indicator.after(retry);
+    stopFast = connectStream(fastEndpoint.href, renderer, indicator, EventSource, retry);
+  }
+  if (params.get('fast_only') === '1') {
+    for (const id of ['full-section','status','connection','reconnect']) document.getElementById(id).hidden = true;
+  }
+  window.addEventListener('pagehide', () => {stop();stopFast();}, {once:true});
 }

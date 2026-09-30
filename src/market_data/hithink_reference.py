@@ -45,6 +45,21 @@ class ReferenceCache:
         except (OSError, ValueError, KeyError, TypeError):
             return None
 
+    def read_persistent(self, key):
+        """Read an existing disk snapshot without treating it as fresh data.
+
+        Reference data such as sector membership remains useful for coverage
+        reporting after its refresh TTL. Callers must expose its stale state and
+        must not use this method as evidence of a current remote refresh.
+        """
+        try:
+            payload = json.loads((self.path / (key + ".json")).read_text(encoding="utf-8"))
+            if payload["version"] != 1:
+                return None
+            return payload["data"]
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+
     def write(self, key, data):
         self.path.mkdir(parents=True, exist_ok=True)
         temporary = None

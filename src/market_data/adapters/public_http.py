@@ -6,9 +6,9 @@ import json
 MAX_BYTES = 16 * 1024 * 1024
 
 
-def get_text(url, headers=None):
+def get_text(url, headers=None, timeout=12):
     request = Request(url, headers={"User-Agent": "A-Agent-market-research/1.0", **(headers or {})})
-    with urlopen(request, timeout=12) as response:
+    with urlopen(request, timeout=timeout) as response:
         data = response.read(MAX_BYTES + 1)
         if len(data) > MAX_BYTES:
             raise ValueError("response_too_large")

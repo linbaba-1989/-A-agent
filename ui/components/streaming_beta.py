@@ -1,3 +1,4 @@
+from urllib.parse import urlencode
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -20,7 +21,7 @@ def offline_token_feed():
     return RealtimeMarketFeed(None)
 
 
-def render_streaming_beta(ctx):
+def render_streaming_beta(ctx, *, fast_only=False):
     feed = shared_beta_feed(ctx)
     offline = feed is None
     if feed is None:
@@ -50,7 +51,21 @@ def render_streaming_beta(ctx):
     for slot in ctx.get("status_slots", {}).values():
         slot.empty()
     ctx["streaming_status_owned"] = True
-    st.caption("动态模式 Beta · 600498.SH / 涨幅 Top20 · 本机 SSE · 状态随共享行情更新")
+    current = "600498.SH"
+    if service.fast is not None:
+        from ui.view_models import normalize_symbol
+        current = normalize_symbol(st.text_input("快速查看股票", value="600498.SH", key="fast_current_symbol"))
+        from src.market_data.contracts import canonical_symbol
+        try: current = canonical_symbol(current)
+        except ValueError:
+            st.info("请输入有效股票代码，如600498.SH。")
+            return
+        st.caption("单股/自选：Fast Lane，目标约1秒；全A/Top20：Full Market，保持原刷新周期。")
+    else:
+        st.caption("动态模式 Beta · 600498.SH / 涨幅 Top20 · 本机 SSE")
     developer = int(bool(ctx.get("acceptance_mode", False)))
-    components.iframe(f"{service.url}?enabled={enabled}&interval={interval}&acceptance={developer}",
+    query = urlencode(dict(enabled=enabled, interval=interval, acceptance=developer,
+        fast=int(service.fast is not None), fast_only=int(fast_only), current=current,
+        watch=",".join(st.session_state.get("watchlist", ["600498.SH"])[:51])))
+    components.iframe(f"{service.url}?{query}",
                       height=1000, scrolling=True)

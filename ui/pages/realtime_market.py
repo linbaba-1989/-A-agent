@@ -60,7 +60,7 @@ def _events(previous: dict[str, dict], rows: list[dict]) -> list[str]:
 
 def render(ctx: dict) -> None:
     st.title("实时行情")
-    if st.toggle("动态模式 Beta", key="streaming_beta_enabled"):
+    if st.toggle("动态模式 Beta", value=bool(getattr(ctx.get("provider"), "hybrid", False)), key="streaming_beta_enabled"):
         from ui.components.streaming_beta import render_streaming_beta
         render_streaming_beta(ctx)
         return

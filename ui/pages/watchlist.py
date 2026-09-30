@@ -17,6 +17,14 @@ def render(ctx: dict) -> None:
     candidate = normalize_symbol(left.text_input("添加代码", placeholder="600498 / 600498.SH"))
     if right.button("添加", width="stretch") and candidate and candidate not in watchlist:
         watchlist.append(candidate); st.rerun()
+    if getattr(ctx.get("provider"), "hybrid", False):
+        from ui.components.streaming_beta import render_streaming_beta
+        render_streaming_beta(ctx, fast_only=True)
+        if watchlist:
+            remove = st.selectbox("移除自选", watchlist)
+            if st.button("删除"):
+                watchlist.remove(remove); st.rerun()
+        return
     feed = ctx.get("realtime_feed")
     if feed is None:
         st.info("行情：UNAVAILABLE；当前没有可用行情源。")

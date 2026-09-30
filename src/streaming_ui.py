@@ -50,7 +50,7 @@ def build_payload(feed, rows, previous_timestamp, now):
         except (KeyError, TypeError, ValueError):
             result["change"] = None
         return result
-    return {"snapshot_seq": feed.snapshot_seq, "status": status,
+    return {"channel": "full_market", "snapshot_seq": feed.snapshot_seq, "status": status,
             "target": public(target) if target else None,
             "top20": [public(row) for row in ranked], "valid_quotes": len(rows),
             "provider_init_count": feed.provider_initializations,
@@ -90,6 +90,11 @@ class StreamingUI:
         self.feed = feed
         self.clock = clock
         self.bus = SnapshotBus()
+        self.fast_bus = SnapshotBus()
+        self.fast = None
+        if feed_mode(feed.provider) in {"hybrid", "free"}:
+            from .market_data.fast_quote_service import FastQuoteService
+            self.fast = FastQuoteService(publish=self.fast_bus.publish)
         self.stop = Event()
         self.lock = Lock()
         self.clients = {}
@@ -138,8 +143,21 @@ class StreamingUI:
                     self.send_header("Cache-Control", "no-store")
                     self.end_headers()
                     self.wfile.write(data)
-                elif route == "events":
+                elif route in {"events", "fast_events"}:
                     query = parse_qs(url.query)
+                    fast = route == "fast_events"
+                    if fast and owner.fast is None:
+                        self.send_error(404); return
+                    current = query.get("current", ["600498.SH"])[0]
+                    watch = query.get("watch", [""])[0].split(",")[:51]
+                    watch = [s for s in watch if s]
+                    if fast:
+                        from .market_data.contracts import canonical_symbol
+                        try:
+                            current = canonical_symbol(current) if current else None
+                            watch = [canonical_symbol(s) for s in watch]
+                        except ValueError:
+                            self.send_error(400); return
                     interval = query.get("interval", ["2"])[0]
                     interval = int(interval) if interval in {"1", "2", "5"} else 2
                     enabled = query.get("enabled", ["1"])[0] == "1"
@@ -148,17 +166,23 @@ class StreamingUI:
                     self.send_header("Cache-Control", "no-cache, no-transform")
                     self.send_header("X-Accel-Buffering", "no")
                     self.end_headers()
-                    client = owner.subscribe(enabled, interval)
-                    version = 0  # Always replay latest complete snapshot on reconnect.
+                    client = object() if fast else owner.subscribe(enabled, interval)
+                    subscription = owner.fast.subscribe(client, current, watch) if fast and enabled else {}
+                    bus = owner.fast_bus if fast else owner.bus
+                    version = bus.version if fast else 0  # Fast reconnect waits for a new request; full replays its snapshot.
                     self.connection.settimeout(5)
                     last_write = monotonic()
                     try:
                         while not owner.stop.is_set():
-                            next_version, payload, published_at, published_mono = owner.bus.read_event(version, timeout=1)
+                            next_version, payload, published_at, published_mono = bus.read_event(version, timeout=.25 if fast else 1)
                             if select.select([self.connection], [], [], 0)[0]:
                                 if not self.connection.recv(1, socket.MSG_PEEK):
                                     break
                             if payload is not None and next_version != version:
+                                if fast:
+                                    payload = {**payload, "target": payload["quotes"].get(current),
+                                        "watchlist": [payload["quotes"][s] for s in watch if s in payload["quotes"]],
+                                        "subscription": subscription}
                                 sent_at = time() * 1000
                                 delay_ms = (monotonic() - published_mono) * 1000
                                 envelope = {**payload, "event_id": next_version,
@@ -167,7 +191,7 @@ class StreamingUI:
                                             "diagnostics_enabled": owner.probe is not None}
                                 data = json.dumps(envelope, ensure_ascii=False, allow_nan=False)
                                 self.wfile.write(f"id: {next_version}\nretry: 1500\ndata: {data}\n\n".encode("utf-8"))
-                                if owner.probe is not None:
+                                if owner.probe is not None and not fast:
                                     with owner.lock:
                                         owner.sent_events.append({"event_id": next_version,
                                             "snapshot_seq": payload["snapshot_seq"],
@@ -184,7 +208,7 @@ class StreamingUI:
                     except (OSError, ValueError):
                         pass
                     finally:
-                        owner.unsubscribe(client)
+                        owner.fast.unsubscribe(client) if fast else owner.unsubscribe(client)
                 else:
                     self.send_error(404)
 
@@ -274,6 +298,7 @@ class StreamingUI:
         if self.stop.is_set():
             return
         self.stop.set()
+        if self.fast is not None:self.fast.close()
         self.server.shutdown()
         self.server.server_close()
         self.http_thread.join(timeout=2)

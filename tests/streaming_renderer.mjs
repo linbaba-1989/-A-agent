@@ -15,6 +15,7 @@ class Element {
   set textContent(value){this.writes++;this.value=value;}
   get textContent(){return this.value;}
   append(...nodes){for(const node of nodes){node.parent=this;this.children.push(node);}}
+  replaceChildren(...nodes){this.children=[];this.append(...nodes);}
   remove(){this.parent.children=this.parent.children.filter(node=>node!==this);}
   getAnimations(){return [];}
   animate(frames,options){this.animations.push({frames,options});}
@@ -79,3 +80,15 @@ assert.equal(latency.samples[2].receive_to_dom_ms,4);
 assert.equal(latency.samples[2].dom_applied_at-latency.samples[2].client_received_at,4);
 assert.equal(latency.samples[2].feed_to_dom_ms,undefined); // no cross-clock subtraction
 console.log('incremental DOM, colors, deduplication, rank, status, reconnect: PASS');
+
+// Fast and full-market sequences/caches must never overwrite each other's widgets.
+const splitRenderer=createRenderer(doc,{fastMode:true});
+splitRenderer.apply({channel:'fast',source:'tencent',received_at:'now',target:row('600498.SH',100,99),watchlist:[]});
+const fastHero=ids.get('hero').children[11].children[1];
+assert.equal(fastHero.textContent,'99.00');
+splitRenderer.apply(packet(101,10));
+assert.equal(fastHero.textContent,'99.00');
+const rankBefore=ids.get('ranking').children.length;
+splitRenderer.apply({channel:'fast',source:'tencent',received_at:'later',target:row('600498.SH',102,98),watchlist:[]});
+assert.equal(fastHero.textContent,'98.00');
+assert.equal(ids.get('ranking').children.length,rankBefore);
