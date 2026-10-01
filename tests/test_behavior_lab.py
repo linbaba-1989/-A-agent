@@ -33,7 +33,7 @@ p={"data_end_date":"2026-09-30T15:00:00",
 "current_match":{"pattern_id":None,"similarity":0.0,"sample_count":0,"confidence":"INSUFFICIENT","historical_matches":[]},
 "patterns":[],"strategy_candidates":[],"backtest":{"metrics":{"trades":0,"win_rate":None,"total_return":0.0},"trades":[]},
 "limitations":[]}
-with patch.object(behavior_lab,"load_profile",return_value=p):
+with patch.object(behavior_lab,"load_profile",return_value=p), patch.object(behavior_lab,"render_market_context"):
     behavior_lab.render()
 """
     app=AppTest.from_string(source).run(timeout=20)

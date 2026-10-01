@@ -19,7 +19,7 @@ from ui.components.acceptance import render_acceptance_panel
 from ui.components.sidebar import render_sidebar
 from ui.components.topbar import render_topbar
 from ui.pages import ai_research, backtest, dashboard, realtime_market, scanner as scanner_page, settings, stock_research, watchlist
-from ui.pages import behavior_lab
+from ui.pages import behavior_lab, market_regime
 from ui.theme import apply_theme
 from ui.view_models import public_market_status, quote_status_display
 
@@ -138,6 +138,8 @@ elif page == "策略回测":
     backtest.render(ctx)
 elif page == "Behavior Lab":
     behavior_lab.render(ctx)
+elif page == "Market Regime":
+    market_regime.render(ctx)
 elif page == "设置":
     settings.render(ctx)
 if not ctx.get("streaming_status_owned"):

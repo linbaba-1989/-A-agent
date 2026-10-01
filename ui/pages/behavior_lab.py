@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from src.market_data.historical_store import HistoricalStore
 from src.behavior.store import read_profile
+from .market_regime import render_market_context
 
 def statistics_rows(pattern):
     rows=[]
@@ -47,6 +48,7 @@ def render(ctx=None):
     cells[1].metric("相似度",f'{match.get("similarity",0):.3f}')
     cells[2].metric("历史相似片段",match.get("sample_count",0))
     cells[3].metric("样本等级",match.get("confidence","INSUFFICIENT"))
+    render_market_context()
     st.subheader("历史相似片段")
     history=match.get("historical_matches",[])
     if history:
